@@ -18,16 +18,17 @@ def test_valid_saml_exits_zero(samples):
     code, out, _ = sample_run(samples, "saml-valid.b64")
     assert code == EXIT_OK
     assert "base64 (HTTP-POST binding)" in out
-    assert "Verdict: no problems found (0 FAIL, 0 WARN, 13 PASS, 1 SKIP)" in out
+    assert "Verdict: no problems found (0 FAIL, 0 WARN, 14 PASS, 1 SKIP)" in out
 
 
 def test_failing_saml_exits_one_and_names_runbook(samples):
     code, out, _ = sample_run(samples, "saml-expired-cert.xml")
     assert code == EXIT_FAIL
     assert "FAIL  Signing certificate dates" in out
+    # Both the signing-cert and trusted-cert date checks point at the same runbook here.
     runbook_lines = [line.strip() for line in out.splitlines() if "Runbook:" in line]
-    assert runbook_lines == ["Runbook: identity-lab 01-expired-signing-cert"]
-    assert "Verdict: 1 problem to fix (1 FAIL, 0 WARN, 12 PASS, 1 SKIP)" in out
+    assert set(runbook_lines) == {"Runbook: identity-lab 01-expired-signing-cert"}
+    assert "Verdict: 2 problems to fix (2 FAIL, 0 WARN, 12 PASS, 1 SKIP)" in out
 
 
 def test_trust_source_is_shown_without_local_path(samples):

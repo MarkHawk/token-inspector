@@ -317,7 +317,7 @@ def signing_cert(sigs):
 
 def cert_checks(sigs, opts):
     cert = signing_cert(sigs)
-    return [_validity_finding(cert, opts), _metadata_match_finding(cert, sigs, opts)]
+    return [_validity_finding(cert, opts), _trusted_validity_finding(cert, opts), _metadata_match_finding(cert, sigs, opts)]
 
 
 def _validity_finding(cert, opts):
@@ -365,6 +365,58 @@ def _validity_finding(cert, opts):
         )
     return Finding(check_id, Status.PASS, title, f"Valid until {utc(na)} (another {duration(left)}).",
                    details=details)
+
+
+def _trusted_validity_finding(cert, opts):
+    """The dates on the certificate(s) the SP trusts, independent of what signed
+    this message. A pinned IdP certificate that has lapsed makes the SP reject
+    every login, even one signed with a perfectly good new key."""
+    check_id, title = "saml.cert.trusted_validity", "Trusted certificate dates"
+    if not opts.trusted_certs:
+        return Finding(check_id, Status.SKIP, title,
+                       "Not checked: pass --metadata or --cert with the certificate the SP trusts.")
+    described = [cert_details(t) for t in opts.trusted_certs]
+    current = [d for d in described if d["not_before"] <= opts.now < d["not_after"]]
+    if current:
+        soonest = min(current, key=lambda d: d["not_after"])
+        left = (soonest["not_after"] - opts.now).total_seconds()
+        return Finding(check_id, Status.PASS, title,
+                       f"The certificate the SP trusts is valid until {utc(soonest['not_after'])} "
+                       f"(another {duration(left)}).",
+                       details={"not_after": soonest["not_after"], "sha256_fingerprint": soonest["sha256_fingerprint"]})
+    # Nothing the SP trusts is valid right now: an SP that checks dates has no usable IdP certificate.
+    signer_differs = cert is not None and all(not same_cert(cert, t) for t in opts.trusted_certs)
+    expired = [d for d in described if opts.now >= d["not_after"]]
+    if expired:
+        newest = max(expired, key=lambda d: d["not_after"])
+        ago = (opts.now - newest["not_after"]).total_seconds()
+        rotated = (" The IdP is now signing with a different certificate, so the SP must be given the IdP's "
+                   "current certificate." if signer_differs
+                   else " SPs that check certificate dates reject every login signed with it.")
+        return Finding(
+            check_id,
+            Status.FAIL,
+            title,
+            f"The certificate the SP trusts (from {opts.trust_source}) expired on {utc(newest['not_after'])}, "
+            f"{duration(ago)} ago.{rotated}",
+            "Give the SP the IdP's current signing certificate, or refresh its copy of the IdP metadata, so it "
+            "trusts the key the IdP signs with now.",
+            runbooks.EXPIRED_SIGNING_CERT,
+            details={"not_after": newest["not_after"], "sha256_fingerprint": newest["sha256_fingerprint"],
+                     "signer_differs": signer_differs},
+        )
+    soonest = min(described, key=lambda d: d["not_before"])
+    ahead = (soonest["not_before"] - opts.now).total_seconds()
+    return Finding(
+        check_id,
+        Status.FAIL,
+        title,
+        f"The certificate the SP trusts (from {opts.trust_source}) is not valid until "
+        f"{utc(soonest['not_before'])}, {duration(ahead)} from now.",
+        "The SP was given a certificate before its start date, or this machine's clock is wrong. Check the SP's "
+        "trusted IdP certificate and the clock.",
+        details={"not_before": soonest["not_before"], "sha256_fingerprint": soonest["sha256_fingerprint"]},
+    )
 
 
 def _metadata_match_finding(cert, sigs, opts):

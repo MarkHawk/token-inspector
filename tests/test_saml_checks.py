@@ -120,6 +120,22 @@ def test_cert_matches_metadata(samples):
     assert status(samples, "saml-valid.xml", "saml.cert.metadata_match", metadata=None) == SKIP
 
 
+def test_trusted_cert_validity(samples):
+    # A current trusted certificate passes, even when the IdP has rotated to a
+    # new signing key (the message is signed by a cert not in the metadata, but
+    # the metadata cert itself is still in date).
+    assert status(samples, "saml-valid.xml", "saml.cert.trusted_validity") == PASS
+    assert status(samples, "saml-rotated-cert.xml", "saml.cert.trusted_validity") == PASS
+    # An expired trusted certificate fails and names the runbook.
+    f = check(samples, "saml-expired-cert.xml", metadata="idp-metadata-expired.xml")["saml.cert.trusted_validity"]
+    assert f.status == FAIL and "expired" in f.summary and f.runbook == "01-expired-signing-cert"
+    # A trusted certificate that is not valid yet also fails.
+    f = check(samples, "saml-future-cert.xml", metadata="idp-metadata-future.xml")["saml.cert.trusted_validity"]
+    assert f.status == FAIL and "not valid until" in f.summary
+    # Nothing to check without trust material.
+    assert status(samples, "saml-valid.xml", "saml.cert.trusted_validity", metadata=None) == SKIP
+
+
 # ---------------------------------------------------------------- timing
 
 
