@@ -449,7 +449,7 @@ def generate(out, now):
         xml_bytes(xsw),
         "Signature wrapping: forged unsigned assertion placed before the signed one",
         md + SAML_EXPECT,
-        {"saml.signature.assertion": "PASS", "saml.signature.coverage": "FAIL"},
+        {"saml.signature.assertion": "SKIP", "saml.signature.coverage": "FAIL"},
     )
 
     # Certificates.
