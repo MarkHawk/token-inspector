@@ -14,14 +14,15 @@ NOW = dt.datetime(2026, 3, 2, 12, 0, 0, tzinfo=dt.UTC)
 NOW_ISO = "2026-03-02T12:00:00Z"
 
 
-def _load_generator():
-    spec = importlib.util.spec_from_file_location("generate_samples", ROOT / "scripts" / "generate_samples.py")
+def load_script(name):
+    """Import one of the scripts/ files as a module."""
+    spec = importlib.util.spec_from_file_location(name, ROOT / "scripts" / f"{name}.py")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
 
 
-generator = _load_generator()
+generator = load_script("generate_samples")
 
 
 class Samples:
