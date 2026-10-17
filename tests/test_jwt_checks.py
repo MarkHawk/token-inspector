@@ -124,6 +124,10 @@ def test_iat(samples):
     assert status(samples, "jwt-valid.txt", "jwt.time.iat") == PASS
     f = check(samples, "jwt-iat-future.txt")["jwt.time.iat"]
     assert f.status == FAIL and f.summary.startswith("The token says it was issued in the future")
+    # A future iat inside the skew allowance is PASS with a note, not WARN:
+    # it only records when the token was minted, so a small gap is clock drift.
+    f = check(samples, "jwt-iat-future.txt", skew=300)["jwt.time.iat"]  # iat is 3 min ahead
+    assert f.status == PASS and "within the 300 s allowance" in f.summary
 
 
 def test_skew_option_applies_to_jwt(samples):

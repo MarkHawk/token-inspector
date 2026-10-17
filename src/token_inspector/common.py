@@ -100,8 +100,14 @@ def match_finding(check_id, title, actual, expected, expected_flag, what, next_s
 
 
 def not_before_finding(check_id, title, when, attr, opts, subject="It", pass_text=None, missing_text=None,
-                       future_text=None):
-    """Check a 'not valid before' time (SAML NotBefore, JWT nbf or iat)."""
+                       future_text=None, within_skew_status=Status.WARN):
+    """Check a 'not valid before' time (SAML NotBefore, JWT nbf or iat).
+
+    within_skew_status is what to report when the time is in the future but
+    inside the skew allowance. For NotBefore and nbf that is a real (if
+    tolerated) 'not valid yet', so it warns; for iat, which only records when
+    the token was minted, a small gap is pure clock difference, so it passes.
+    """
     if when is None:
         return Finding(check_id, Status.SKIP, title, missing_text or f"No {attr} is set (it is optional).")
     ahead = (when - opts.now).total_seconds()
@@ -110,6 +116,14 @@ def not_before_finding(check_id, title, when, attr, opts, subject="It", pass_tex
         text = pass_text or f"{attr} {utc_relative(when, opts.now)} has passed."
         return Finding(check_id, Status.PASS, title, text.format(when=utc_relative(when, opts.now)), details=details)
     if ahead <= opts.skew:
+        if within_skew_status is Status.PASS:
+            return Finding(
+                check_id,
+                Status.PASS,
+                title,
+                f"{attr} is {duration(ahead)} ahead of this clock, within the {opts.skew} s allowance.",
+                details=details,
+            )
         return Finding(
             check_id,
             Status.WARN,

@@ -239,7 +239,8 @@ def time_findings(token, opts):
         not_before_finding("jwt.time.nbf", "Not before (nbf)", _time(c, "nbf"), "nbf", opts, subject="The token"),
         not_before_finding("jwt.time.iat", "Issued at (iat)", issued, "iat", opts, subject="The token",
                            pass_text="Issued {when}.", missing_text="No iat claim.",
-                           future_text="The token says it was issued in the future"),
+                           future_text="The token says it was issued in the future",
+                           within_skew_status=Status.PASS),
     ]
     for name in ("exp", "nbf", "iat"):
         if name in c and _time(c, name) is None:
