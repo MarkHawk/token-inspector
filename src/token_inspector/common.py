@@ -141,7 +141,8 @@ def not_before_finding(check_id, title, when, attr, opts, subject="It", pass_tex
     )
 
 
-def expiry_finding(check_id, title, when, attr, opts, issued=None, subject="It", missing_status=Status.WARN):
+def expiry_finding(check_id, title, when, attr, opts, issued=None, subject="It", missing_status=Status.WARN,
+                   noun="the token"):
     """Check an expiry time (SAML NotOnOrAfter, JWT exp)."""
     if when is None:
         return Finding(
@@ -186,7 +187,8 @@ def expiry_finding(check_id, title, when, attr, opts, issued=None, subject="It",
         check_id,
         Status.FAIL,
         title,
-        f"Expired {duration(late)} ago ({attr} {utc(when)}). This is an old one, not a clock problem.",
+        f"Expired {duration(late)} ago ({attr} {utc(when)}). That is far more than clock skew could explain, "
+        f"so {noun} is simply old.",
         "It was probably replayed from browser history or taken from an old capture. "
         "Get a fresh capture of a failing login." + replay_hint,
         details=details,

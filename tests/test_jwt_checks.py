@@ -110,7 +110,8 @@ def test_signature(samples):
 def test_exp(samples):
     assert status(samples, "jwt-valid.txt", "jwt.time.exp") == PASS
     f = check(samples, "jwt-expired.txt")["jwt.time.exp"]
-    assert f.status == FAIL and "3 h ago" in f.summary and "not a clock problem" in f.summary
+    assert f.status == FAIL and "3 h ago" in f.summary
+    assert "That is far more than clock skew could explain, so the token is simply old." in f.summary
 
 
 def test_nbf(samples):
@@ -165,8 +166,15 @@ def test_nonce(samples):
 def test_azp(samples):
     assert status(samples, "jwt-valid.txt", "oidc.azp") == PASS
     assert status(samples, "oidc-multi-aud-no-azp.txt", "oidc.azp") == WARN
-    f = check(samples, "oidc-azp-mismatch.txt")["oidc.azp"]
-    assert f.status == FAIL and "another client" in f.summary
+    r = check(samples, "oidc-azp-mismatch.txt")
+    assert r["jwt.audience"].status == PASS
+    assert r["oidc.azp"].status == FAIL and "another client" in r["oidc.azp"].summary
+
+
+def test_azp_is_not_reported_twice_when_audience_already_failed(samples):
+    r = check(samples, "jwt-wrong-audience.txt")
+    assert r["jwt.audience"].status == FAIL
+    assert r["oidc.azp"].status == SKIP and r["oidc.azp"].summary == "Same cause as the Audience failure above."
 
 
 def test_required_claims(samples):

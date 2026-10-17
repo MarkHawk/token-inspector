@@ -611,7 +611,7 @@ def generate(out, now):
     w.sample("jwt-tampered.txt", f"{head}.{_b64url(forged)}.{sig}\n", "Claims edited after signing", jw + OIDC_EXPECT,
              {"jwt.signature": "FAIL"})
     w.sample("jwt-wrong-audience.txt", rs256(id_token_claims(now, aud="other-app", azp="other-app")),
-             "Issued to a different client", jw + OIDC_EXPECT, {"jwt.audience": "FAIL"})
+             "Issued to a different client", jw + OIDC_EXPECT, {"jwt.audience": "FAIL", "oidc.azp": "SKIP"})
     w.sample("jwt-wrong-issuer.txt", rs256(id_token_claims(now, iss="https://idp.example.com:8443/realms/example")),
              "Issuer includes a port the RP does not expect", jw + OIDC_EXPECT, {"jwt.issuer": "FAIL"})
     w.sample("oidc-missing-nonce.txt", rs256(id_token_claims(now, nonce=None)), "ID token without a nonce",
@@ -621,7 +621,7 @@ def generate(out, now):
     w.sample("oidc-multi-aud-no-azp.txt", rs256(id_token_claims(now, aud=[CLIENT_ID, API_AUDIENCE], azp=None)),
              "Several audiences and no azp", jw + OIDC_EXPECT, {"oidc.azp": "WARN", "jwt.audience": "PASS"})
     w.sample("oidc-azp-mismatch.txt", rs256(id_token_claims(now, azp="other-app")),
-             "azp names a different client", jw + OIDC_EXPECT, {"oidc.azp": "FAIL"})
+             "azp names a different client", jw + OIDC_EXPECT, {"oidc.azp": "FAIL", "jwt.audience": "PASS"})
     w.sample("oidc-missing-claims.txt", rs256(id_token_claims(now, sub=None)),
              "ID token missing the required sub claim", jw + OIDC_EXPECT, {"oidc.required_claims": "FAIL"})
     access = rs256(

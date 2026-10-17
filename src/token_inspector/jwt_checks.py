@@ -270,14 +270,15 @@ def claim_findings(token, opts):
     if expected_aud is None and is_id and opts.client_id:
         expected_aud, source = opts.client_id, "--client-id"
     aud = c.get("aud")
-    findings.append(match_finding(
+    audience = match_finding(
         "jwt.audience", "Audience (aud)", aud, expected_aud, "--expect-audience", "the audience",
         "The token was issued for a different client or API. Check the client ID the relying party is "
         "configured with, and for access tokens the audience (resource) requested from the IdP.",
         source,
-    ))
+    )
+    findings.append(audience)
     findings.append(nonce_finding(token, opts))
-    findings.append(azp_finding(token, opts))
+    findings.append(azp_finding(token, opts, audience))
     findings.append(required_claims_finding(token, opts))
     return findings
 
@@ -314,12 +315,16 @@ def nonce_finding(token, opts):
     )
 
 
-def azp_finding(token, opts):
+def azp_finding(token, opts, audience=None):
     check_id, title = "oidc.azp", "Authorised party (azp)"
     if token.token_type != "id":
         return Finding(check_id, Status.SKIP, title, "Not an ID token.")
     azp = token.claims.get("azp")
     aud = token.claims.get("aud")
+    aud_values = aud if isinstance(aud, list) else [aud]
+    if audience is not None and audience.status == Status.FAIL and azp is not None and azp in aud_values:
+        # azp just repeats the wrong audience: one cause, reported once.
+        return Finding(check_id, Status.SKIP, title, "Same cause as the Audience failure above.")
     several = isinstance(aud, list) and len(aud) > 1
     if azp is None:
         if several:

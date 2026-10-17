@@ -126,7 +126,8 @@ def test_cert_matches_metadata(samples):
 def test_not_on_or_after(samples):
     assert status(samples, "saml-valid.xml", "saml.time.not_on_or_after") == PASS
     f = check(samples, "saml-expired-assertion.xml")["saml.time.not_on_or_after"]
-    assert f.status == FAIL and "not a clock problem" in f.summary and f.runbook is None
+    assert f.status == FAIL and f.runbook is None
+    assert "That is far more than clock skew could explain, so the response is simply old." in f.summary
 
 
 def test_recent_expiry_looks_like_clock_skew(samples):

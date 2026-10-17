@@ -439,7 +439,7 @@ def time_checks(a, msg, opts):
     when, name = min(candidates, key=lambda c: c[0]) if candidates else (None, "NotOnOrAfter")
     issued = a.issue_instant.value if a.issue_instant else None
     findings.append(expiry_finding("saml.time.not_on_or_after", "Not on or after", when, name, opts,
-                                   issued=issued, subject="The assertion"))
+                                   issued=issued, subject="The assertion", noun="the response"))
     return findings
 
 
