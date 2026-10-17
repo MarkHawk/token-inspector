@@ -1,0 +1,20 @@
+{
+  "description": "SAML response captured from identity-lab",
+  "label": "expired-signing-cert",
+  "args": [
+    "--metadata",
+    "{dir}/idp-metadata.xml",
+    "--expect-issuer",
+    "https://idlab.home:8180/realms/idlab",
+    "--expect-audience",
+    "https://idlab.home:8181/saml/metadata",
+    "--expect-destination",
+    "https://idlab.home:8181/saml/acs",
+    "--expect-in-response-to",
+    "ONELOGIN_55d0484f0a7a2fbfbc1789acd5925dee473859c5",
+    "--now",
+    "2026-10-17T13:34:19Z"
+  ],
+  "signature_invalidated_by_sanitising": false,
+  "note": "Caught Keycloak mid-rotation: signed by the auto-generated fallback key (kid -Uffj..., self-signed, valid to 2036), which is not in the captured idp-metadata.xml/jwks.json. The pinned/trusted cert (sp-pinned-cert.pem, SHA-256 0F:59:...) had expired. See samples/lab/README.md."
+}

@@ -22,6 +22,32 @@ expected to fail for that reason alone.
 
 `tests/test_lab_samples.py` runs every capture here through the CLI.
 
+## The `expired-signing-cert` capture
+
+This capture caught Keycloak **mid-rotation**, which is worth knowing when
+reading it:
+
+- The SAML response and both JWTs were signed by Keycloak's auto-generated
+  **fallback key** (self-signed `CN=idlab`, valid for ten years), not by the
+  scenario's certificate. When the pinned CA-signed signing certificate reached
+  its `notAfter`, Keycloak demoted it and minted a fallback to keep signing.
+- The captured `idp-metadata.xml` and `jwks.json` still advertise only the
+  **expired** CA-signed certificate (`notAfter` three seconds before the capture
+  time); the fallback key's `kid` is in none of them. So the key that signed the
+  artifacts is not among the keys the capture publishes.
+- `capture_from_lab.sh` fetches the metadata and JWKS **before** it performs the
+  logins (`capture_public` runs first, then `capture_saml`/`capture_oidc`), and
+  the public documents are read with plain GETs that never sign a token. The
+  first signing operation is the SAML login, which is where Keycloak minted the
+  fallback. So the JWKS was fetched before the fallback key existed — which is
+  exactly why it is absent from the captured JWKS and metadata.
+- `sp-pinned-cert.pem` is the certificate the SP had pinned during the break:
+  the expired CA-signed signing certificate (public cert only), extracted from
+  this capture's `idp-metadata.xml`, where it is byte-identical to what the SP
+  pinned. Run the SAML response against it with `--cert sp-pinned-cert.pem` to
+  see the SP's view: the trusted certificate has expired and the IdP is signing
+  with a different key.
+
 ## Troubleshooting
 
 **`capture_from_lab.sh` can't connect to the lab host.** The capture talks to

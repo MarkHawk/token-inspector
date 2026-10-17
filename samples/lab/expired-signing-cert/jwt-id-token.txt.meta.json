@@ -1,0 +1,18 @@
+{
+  "description": "ID token captured from identity-lab",
+  "label": "expired-signing-cert",
+  "args": [
+    "--jwks",
+    "{dir}/jwks.json",
+    "--expect-issuer",
+    "https://idlab.home:8180/realms/idlab",
+    "--client-id",
+    "oidc-rp",
+    "--nonce",
+    "lebzoFV3N2-FxGes9fj8NA",
+    "--now",
+    "2026-10-17T13:34:19Z"
+  ],
+  "signature_invalidated_by_sanitising": false,
+  "note": "Signed by the fallback key (kid -Uffj...) that the captured jwks.json does not list; the JWKS still advertises the expired sig key (kid S16yFIQ4...). See samples/lab/README.md."
+}

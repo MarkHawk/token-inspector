@@ -22,4 +22,5 @@ dist/
 *.p12
 *.pfx
 !samples/lab/*.pem
+!samples/lab/**/*.pem
 samples/generated/
