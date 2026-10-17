@@ -35,6 +35,7 @@ class Report:
     findings: list = field(default_factory=list)
     other_tokens: int = 0
     redacted: bool = False
+    notes: list = field(default_factory=list)  # e.g. "Using idp-metadata.xml found next to the input"
 
     def count(self, status):
         return sum(1 for f in self.findings if f.status == status)

@@ -112,7 +112,7 @@ def test_json_output_structure(samples):
     code, out, _ = sample_run(samples, "saml-xsw.xml", "--json")
     doc = json.loads(out)
     assert code == EXIT_FAIL == doc["summary"]["exit_code"]
-    assert set(doc) == {"tool", "version", "input", "checked_at", "skew_seconds", "redacted", "decoded",
+    assert set(doc) == {"tool", "version", "input", "checked_at", "skew_seconds", "redacted", "notes", "decoded",
                         "findings", "summary"}
     assert doc["checked_at"] == NOW_ISO
     assert doc["input"]["kind"] == "saml"

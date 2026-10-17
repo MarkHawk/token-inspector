@@ -18,6 +18,9 @@ from token_inspector.xmlsafe import XMLRejected
 
 EXIT_OK, EXIT_FAIL, EXIT_ERROR = 0, 1, 2
 
+# Trust material picked up from the input file's folder when no trust flag is given.
+METADATA_NAME, JWKS_NAME = "idp-metadata.xml", "jwks.json"
+
 
 def build_parser():
     p = argparse.ArgumentParser(
@@ -33,6 +36,11 @@ def build_parser():
     trust.add_argument("--cert", action="append", default=[], metavar="FILE", help="IdP signing certificate (PEM or DER); repeatable")
     trust.add_argument("--metadata", metavar="FILE", help="IdP SAML metadata XML")
     trust.add_argument("--jwks", metavar="FILE", help="JWKS JSON file")
+    trust.add_argument(
+        "--no-discover",
+        action="store_true",
+        help=f"do not use {METADATA_NAME} or {JWKS_NAME} found next to the input file when no trust flag is given",
+    )
 
     exp = p.add_argument_group("expected values")
     exp.add_argument("--expect-issuer", metavar="VALUE")
@@ -64,6 +72,26 @@ def parse_now(value):
     except ValueError:
         raise InputError(f"--now {value!r} is not an ISO 8601 time such as 2026-03-02T12:00:00Z") from None
     return (t if t.tzinfo else t.replace(tzinfo=dt.UTC)).astimezone(dt.UTC)
+
+
+def discover_trust(args, token):
+    """Fill in --metadata or --jwks from a file sitting next to the input.
+
+    Only when the input is a file and no trust flag was given: explicit flags
+    always win. Returns a note for the report, or None."""
+    if args.no_discover or args.metadata or args.cert or args.jwks:
+        return None
+    if not args.file or args.file == "-" or args.token is not None:
+        return None
+    folder = os.path.dirname(os.path.abspath(args.file))
+    name = {"saml": METADATA_NAME, "jwt": JWKS_NAME}.get(token.kind)
+    if not name or not os.path.isfile(os.path.join(folder, name)):
+        return None
+    if name == METADATA_NAME:
+        args.metadata = os.path.join(folder, name)
+    else:
+        args.jwks = os.path.join(folder, name)
+    return f"Using {name} found next to the input"
 
 
 def build_options(args):
@@ -103,13 +131,16 @@ def main(argv=None, stdin=None, stdout=None, stderr=None):
     stderr = stderr or sys.stderr
     args = build_parser().parse_args(argv)
     try:
-        opts = build_options(args)
         tokens = detect(read_input(args.file, args.token, stdin))
         if not 1 <= args.pick <= len(tokens):
             raise InputError(f"--pick {args.pick}: the input holds {len(tokens)} token(s)")
         token = tokens[args.pick - 1]
+        note = discover_trust(args, token)
+        opts = build_options(args)
         report = analyse(token, opts)
         report.other_tokens = len(tokens) - 1
+        if note:
+            report.notes.append(note)
     except (InputError, KeyFileError, SamlParseError, JwtParseError, XMLRejected) as exc:
         print(f"token-inspector: {exc}", file=stderr)
         return EXIT_ERROR

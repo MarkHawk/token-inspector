@@ -11,12 +11,22 @@ is at fault and what to change.
 
 ## Principles
 
-**Offline by default.** The tool reads only the files you pass it. It never
-follows a JWKS or metadata URL and never contacts the issuer. That keeps it
-usable on a locked-down support laptop, and it means pasting a hostile token can
-never trigger outbound traffic. Trust material (`--metadata`, `--cert`,
-`--jwks`) is always a local file. The test suite enforces this: a fixture fails
-any test that opens a socket.
+**Offline by default.** The tool reads only local files: the ones you pass it,
+plus an `idp-metadata.xml` or `jwks.json` sitting next to the input file when
+you give no trust flag (the report says when it does this). It never follows a
+JWKS or metadata URL and never contacts the issuer. That keeps it usable on a
+locked-down support laptop, and it means pasting a hostile token can never
+trigger outbound traffic. Trust material (`--metadata`, `--cert`, `--jwks`) is
+always a local file. The test suite enforces this: a fixture fails any test
+that opens a socket.
+
+**Easy first run, explicit when it matters.** Picking up trust material from
+the input's folder means a capture folder laid out the usual way just works
+with no flags. It is never silent: the report names the file it used, any
+explicit `--metadata`, `--cert` or `--jwks` switches it off entirely, and
+`--no-discover` turns it off with no other change. A token pasted with
+`--token` or read from standard input never triggers it, because there is no
+folder to look in.
 
 **One check, one finding.** A normal verification library stops at the first
 problem, which is the right thing for an application but the wrong thing for

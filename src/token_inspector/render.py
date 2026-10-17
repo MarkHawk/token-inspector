@@ -37,6 +37,7 @@ def render_text(report, colour=False):
         out.append(f"Found in:   {report.location}")
     if report.other_tokens:
         out.append(f"Note:       the input holds {report.other_tokens} more token(s); use --pick N to choose another")
+    out += [f"Note:       {note}" for note in report.notes]
     out.append(f"Checked at: {utc(report.now)}, clock skew allowance {report.skew} s")
     if report.redacted:
         out.append("Redacted:   emails, names, NameID and sub are masked")
@@ -115,6 +116,7 @@ def report_dict(report):
         "checked_at": _json_value(report.now),
         "skew_seconds": report.skew,
         "redacted": report.redacted,
+        "notes": list(report.notes),
         "decoded": [
             {"section": title, "fields": [{"name": label.strip(), "value": _json_value(value)} for label, value in rows]}
             for title, rows in report.sections
