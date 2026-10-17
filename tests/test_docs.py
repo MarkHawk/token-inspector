@@ -29,20 +29,31 @@ def test_quick_start_install_is_three_commands():
     assert len(install.strip().splitlines()) == 3
 
 
-def test_quick_start_command_has_no_flags_and_shows_what_the_readme_says():
+def test_quick_start_shows_the_demo_first_with_its_real_output():
     blocks = code_blocks(section(README, "Try it in 1 minute"))
-    words = shlex.split(blocks[1])
-    assert words[0] == "token-inspector" and len(words) == 2 and not words[1].startswith("-")
+    assert blocks[1] == "token-inspector demo\n"
     out = io.StringIO()
-    main([str(ROOT / words[1])], stdout=out, stderr=io.StringIO())
-    shown = [line for line in blocks[2].splitlines() if line.startswith(("Note:", "Verdict:"))]
-    assert len(shown) == 2
-    for line in shown:
-        assert line in out.getvalue()
+    main(["demo"], stdout=out, stderr=io.StringIO())
+    assert blocks[2] == out.getvalue()
 
 
-def test_quick_start_mentions_the_demo():
-    assert "token-inspector demo\n" in section(README, "Try it in 1 minute")
+def test_lab_example_uses_the_suggested_now_and_shows_real_output():
+    quick = section(README, "Try it in 1 minute")
+    lab = quick.split("### Try a real lab capture\n", 1)[1]
+    command, shown = code_blocks(lab)[:2]
+    words = shlex.split(command)
+    assert words[0] == "token-inspector" and words[2:] == ["--now", words[3]]
+    report = io.StringIO()
+    main([str(ROOT / words[1])], stdout=report, stderr=io.StringIO())
+    assert f"add --now {words[3]}." in " ".join(report.getvalue().split())  # the value the report suggests
+    out = io.StringIO()
+    main([str(ROOT / words[1]), *words[2:]], stdout=out, stderr=io.StringIO())
+    out = out.getvalue()
+    assert shown.splitlines()[0] in out  # the Note line
+    likely = shown[shown.index("== Likely cause =="):]
+    assert likely in out  # the whole Likely cause section and the verdict, verbatim
+    explanation = lab.split("```")[2].strip()  # the text between the command and its output
+    assert explanation.startswith("`--now`") and explanation.count(". ") == 0  # one sentence
 
 
 def test_usage_lists_every_option():

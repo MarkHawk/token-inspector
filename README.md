@@ -15,11 +15,37 @@ source venv/bin/activate
 pip install -e .
 ```
 
-Then point it at a real capture that ships with the repository:
+Then see what it makes of four bundled samples:
 
 ```
-token-inspector samples/lab/expired-signing-cert/saml-response.xml
+token-inspector demo
 ```
+
+```
+token-inspector demo: 4 bundled samples, checked offline as at the time each was captured
+
+  valid     Signed SAML response, in date   PASS  no problems found
+  expired   OIDC ID token, expired 3 h ago  FAIL  likely cause: the token is simply old
+  rotation  Lab capture, mid key rotation   FAIL  likely cause: key rotation, trusted cert expired
+  xsw       Forged SAML response            FAIL  likely cause: signature wrapping (XSW)
+
+Full report for one sample:  token-inspector demo <name>   e.g. token-inspector demo xsw
+Try your own file:           token-inspector <file>
+```
+
+### Try a real lab capture
+
+This SAML response was captured from
+[identity-lab](https://github.com/MarkHawk/identity-lab) while the identity
+provider was mid certificate rotation, and ships with the repository:
+
+```
+token-inspector samples/lab/expired-signing-cert/saml-response.xml --now 2026-10-17T13:34:20Z
+```
+
+`--now` checks the response as at the moment it was captured rather than
+today, so its age is not reported as a problem; leave it out and the report
+suggests the value to use.
 
 ```
 Note:       Using idp-metadata.xml found next to the input
@@ -33,24 +59,26 @@ Note:       Using idp-metadata.xml found next to the input
   ...
   PASS  Signing certificate dates    Valid until 2036-10-17 13:34:20 UTC (another 3653 days).
   FAIL  Trusted certificate dates    The certificate the SP trusts (from metadata idp-metadata.xml)
-                                     expired on 2026-10-17 13:34:16 UTC, ...
+                                     expired on 2026-10-17 13:34:16 UTC, 4 s ago. The IdP is now
+                                     signing with a different certificate, so the SP must be given
+                                     the IdP's current certificate.
   ...
-Verdict: 6 problems to fix (6 FAIL, 0 WARN, 5 PASS, 4 SKIP)
+
+== Likely cause ==
+  The certificate the SP trusts has expired and the IdP has moved on to a new signing key, so the SP
+  no longer trusts the key that signs its logins.
+  First:     Give the SP the IdP's current signing certificate, or have it refresh the IdP metadata.
+  Runbook:   identity-lab 01-expired-signing-cert
+             https://github.com/MarkHawk/identity-lab/blob/main/runbooks/01-expired-signing-cert.md
+  Explains:  Response signature, Assertion signature, Signature coverage, Trusted certificate dates,
+             Certificate matches trusted
+
+Verdict: 5 problems to fix (5 FAIL, 0 WARN, 6 PASS, 4 SKIP)
 ```
 
-No flags needed: it found the IdP's metadata in the same folder and checked
-against it. This capture caught the identity provider mid certificate rotation.
-The certificate the service provider trusts has expired, so the IdP has started
-signing with a new one the SP does not know about, and the report says exactly
-that. (It also flags the response as old, because it was captured in the past;
-the report tells you the `--now` value to check it as at the time it was
-issued.)
-
-To see four bundled cases side by side, including a signature wrapping attack:
-
-```
-token-inspector demo
-```
+No trust flags were needed: it found the IdP's metadata in the same folder and
+checked against it. Every check still gets its own line, and the Likely cause
+section ties the five failures together into the one thing to fix.
 
 ## Common cases
 
