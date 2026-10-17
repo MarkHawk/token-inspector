@@ -1,0 +1,19 @@
+{
+  "description": "SAML response captured from identity-lab",
+  "label": "baseline",
+  "args": [
+    "--metadata",
+    "{dir}/idp-metadata.xml",
+    "--expect-issuer",
+    "https://idlab.home:8180/realms/idlab",
+    "--expect-audience",
+    "https://idlab.home:8181/saml/metadata",
+    "--expect-destination",
+    "https://idlab.home:8181/saml/acs",
+    "--expect-in-response-to",
+    "ONELOGIN_90db25135b7f86c6a3140b132f98d5f7d6a12874",
+    "--now",
+    "2026-10-17T11:29:17Z"
+  ],
+  "signature_invalidated_by_sanitising": false
+}

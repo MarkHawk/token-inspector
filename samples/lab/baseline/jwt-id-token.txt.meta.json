@@ -1,0 +1,17 @@
+{
+  "description": "ID token captured from identity-lab",
+  "label": "baseline",
+  "args": [
+    "--jwks",
+    "{dir}/jwks.json",
+    "--expect-issuer",
+    "https://idlab.home:8180/realms/idlab",
+    "--client-id",
+    "oidc-rp",
+    "--nonce",
+    "3gRZslQZbnBgV90Qd_XSjg",
+    "--now",
+    "2026-10-17T11:29:17Z"
+  ],
+  "signature_invalidated_by_sanitising": false
+}

@@ -21,3 +21,19 @@ If sanitising had to change signed content, the sidecar says
 expected to fail for that reason alone.
 
 `tests/test_lab_samples.py` runs every capture here through the CLI.
+
+## Troubleshooting
+
+**`capture_from_lab.sh` can't connect to the lab host.** The capture talks to
+the lab by its `LAB_HOST` name (for example `idlab.home`), the same name that
+appears in the issuer and audience, so the signed URLs stay intact. If the
+machine you capture from can't resolve that name, point it at wherever the lab
+publishes its ports by adding a line to `/etc/hosts` — when the lab runs on the
+same machine, that's loopback:
+
+```
+127.0.0.1 idlab.home
+```
+
+Use `--map-host` only if you must; it rewrites the host name and so breaks the
+signatures.
