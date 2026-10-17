@@ -62,6 +62,25 @@ def test_no_key_files_outside_lab_samples():
             assert "PRIVATE KEY" not in path.read_text(errors="replace"), rel
 
 
+def test_no_tracked_file_contains_a_private_key():
+    """Public certificates may now be committed under samples/lab/, so guard the
+    whole repository by content, not just by file name: no tracked (or
+    about-to-be-tracked) file may contain a PEM private key block, in plain text
+    or hidden inside base64. The sanitiser's own detector is reused so this
+    stays in step with what capture refuses to write.
+
+    The sanitise/capture tests build their fake key headers at run time by
+    concatenation, so a whole '-----BEGIN ... PRIVATE KEY-----' header never
+    appears in any source file and none of them are flagged.
+    """
+    offenders = []
+    for path in repo_files():
+        text = path.read_bytes().decode("utf-8", errors="replace")
+        if any(sanitise.PRIVATE_KEY.search(view) for view in sanitise.decoded_views(text)):
+            offenders.append(path.relative_to(ROOT).as_posix())
+    assert not offenders, f"private key material in tracked files: {offenders}"
+
+
 def test_personal_patterns_file_is_ignored_and_example_is_empty():
     ignored = subprocess.run(["git", "check-ignore", "-q", ".personal-patterns"], cwd=ROOT, check=False)
     assert ignored.returncode == 0
