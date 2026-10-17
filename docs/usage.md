@@ -100,7 +100,7 @@ the `--now` value that would check it as at the time it was issued.
 
 | Option | What it does |
 |---|---|
-| `--json` | Print the report as JSON: the decoded fields, every finding with its `check_id`, any `notes`, and a summary. |
+| `--json` | Print the report as JSON: the decoded fields, every finding with its `check_id`, any `notes`, the `likely_cause` (or `null`, see [checks.md](checks.md#likely-cause)), and a summary. |
 | `--redact` | Mask emails, names, NameID and `sub`, so the report can be pasted into a ticket. |
 | `--version` | Print the version and exit. |
 

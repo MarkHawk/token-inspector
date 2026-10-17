@@ -26,7 +26,8 @@ def test_failing_saml_exits_one_and_names_runbook(samples):
     assert code == EXIT_FAIL
     assert "FAIL  Signing certificate dates" in out
     # Both the signing-cert and trusted-cert date checks point at the same runbook here.
-    runbook_lines = [line.strip() for line in out.splitlines() if "Runbook:" in line]
+    checks = out.split("== Checks ==")[1].split("== Likely cause ==")[0]
+    runbook_lines = [line.strip() for line in checks.splitlines() if "Runbook:" in line]
     assert set(runbook_lines) == {"Runbook: identity-lab 01-expired-signing-cert"}
     assert "Verdict: 2 problems to fix (2 FAIL, 0 WARN, 12 PASS, 1 SKIP)" in out
 
@@ -113,7 +114,7 @@ def test_json_output_structure(samples):
     doc = json.loads(out)
     assert code == EXIT_FAIL == doc["summary"]["exit_code"]
     assert set(doc) == {"tool", "version", "input", "checked_at", "skew_seconds", "redacted", "notes", "decoded",
-                        "findings", "summary"}
+                        "findings", "likely_cause", "summary"}
     assert doc["checked_at"] == NOW_ISO
     assert doc["input"]["kind"] == "saml"
     cov = next(f for f in doc["findings"] if f["check_id"] == "saml.signature.coverage")

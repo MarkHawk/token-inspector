@@ -151,3 +151,29 @@ plus any added with `--require-claim`. FAIL when one is missing.
 **Encrypted token.** WARN when the input is an encrypted JWT (a JWE): its claims
 can only be read with the relying party's private key, so nothing else can be
 checked here.
+
+## Likely cause
+
+Several checks often fail for one reason: a rotated key fails both signatures,
+the coverage check and the certificate comparison. When the FAILs match a
+known pattern, a **Likely cause** section just above the verdict names that
+reason in one sentence, says what to do first, links the identity-lab runbook
+where there is one, and lists which checks it explains. Any FAIL it does not
+explain is listed too, so nothing is hidden. The individual check lines are
+unchanged. With `--json` the same thing is in `likely_cause` (or `null`).
+
+The known patterns, most specific first (the first that fits wins):
+
+| Pattern | When it applies |
+|---|---|
+| `signature-wrapping` | A valid signature covers a different element from the assertion an SP would read, or IDs are duplicated: an XSW attack. |
+| `idp-key-rotation` | The certificate the SP trusts has expired and the IdP signs with a different, still valid one. |
+| `signing-cert-expired` | The IdP is signing with an expired certificate. |
+| `kid-not-in-jwks` | The JWT's `kid` is not in the JWKS: a stale JWKS after key rotation. |
+| `issued-to-another-client` | The JWT's `aud` or `azp` names a different client or API. |
+| `clock-skew` | A time check missed by more than the skew allowance but less than 15 minutes. |
+| `old-response`, `old-token` | Expired by more than 15 minutes: an old capture or a replay. |
+
+The two timing patterns only apply when they account for every FAIL, because
+an expired timestamp says nothing about, say, a broken signature found in the
+same capture. When no pattern fits, the section is left out.

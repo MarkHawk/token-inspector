@@ -168,6 +168,8 @@ def expiry_finding(check_id, title, when, attr, opts, issued=None, subject="It",
         )
     left = (when - opts.now).total_seconds()
     details = {"value": when, "seconds_remaining": left}
+    if issued is not None:
+        details["issued"] = issued
     if left > 0:
         return Finding(check_id, Status.PASS, title, f"Valid for another {duration(left)} ({attr} {utc(when)}).",
                        details=details)

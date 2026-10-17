@@ -36,6 +36,8 @@ class Report:
     other_tokens: int = 0
     redacted: bool = False
     notes: list = field(default_factory=list)  # e.g. "Using idp-metadata.xml found next to the input"
+    now_given: bool = False  # evaluated as at --now rather than the current time
+    likely_cause: object = None  # a causes.Cause grouping related FAILs, when a known pattern fits
 
     def count(self, status):
         return sum(1 for f in self.findings if f.status == status)

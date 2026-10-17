@@ -64,8 +64,48 @@ def render_text(report, colour=False):
         if f.runbook:
             out.append(f"{indent}Runbook: identity-lab {f.runbook}")
 
+    out += likely_cause_lines(report)
     out += ["", verdict_line(report)]
     return "\n".join(out) + "\n"
+
+
+def likely_cause_lines(report):
+    """The Likely cause section, or nothing when no known pattern fits."""
+    cause = report.likely_cause
+    if cause is None:
+        return []
+    titles = {f.check_id: f.title for f in report.findings}
+    others = [f.title for f in report.findings if f.status == Status.FAIL and f.check_id not in cause.explains]
+    rows = [("First", cause.first_step)]
+    if cause.runbook:
+        rows.append(("Runbook", f"identity-lab {cause.runbook} {runbooks.url(cause.runbook)}"))
+    rows.append(("Explains", ", ".join(titles[c] for c in cause.explains)))
+    if others:
+        rows.append(("Not explained", ", ".join(others) + " (see the checks above)"))
+    out = ["", "== Likely cause =="]
+    out += textwrap.wrap(cause.summary, WIDTH, initial_indent="  ", subsequent_indent="  ")
+    width = max(len(label) for label, _ in rows) + 1
+    for label, text in rows:
+        out += textwrap.wrap(text, WIDTH, initial_indent=f"  {label + ':':<{width}}  ",
+                             subsequent_indent=" " * (width + 4), break_long_words=False, break_on_hyphens=False)
+    return out
+
+
+def likely_cause_dict(report):
+    cause = report.likely_cause
+    if cause is None:
+        return None
+    return {
+        "pattern": cause.pattern,
+        "label": cause.label,
+        "summary": cause.summary,
+        "first_step": cause.first_step,
+        "runbook": cause.runbook,
+        "runbook_url": runbooks.url(cause.runbook) if cause.runbook else None,
+        "explains": list(cause.explains),
+        "not_explained": [f.check_id for f in report.findings
+                          if f.status == Status.FAIL and f.check_id not in cause.explains],
+    }
 
 
 def _plural(n, word):
@@ -134,6 +174,7 @@ def report_dict(report):
             }
             for f in report.findings
         ],
+        "likely_cause": likely_cause_dict(report),
         "summary": {
             "fail": report.count(Status.FAIL),
             "warn": report.count(Status.WARN),
