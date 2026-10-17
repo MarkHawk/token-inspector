@@ -23,6 +23,9 @@ token-inspector = "token_inspector.cli:main"
 [tool.setuptools.packages.find]
 where = ["src"]
 
+[tool.setuptools.package-data]
+token_inspector = ["demo_samples/*.json", "demo_samples/*/*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra"

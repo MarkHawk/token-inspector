@@ -1,0 +1,86 @@
+{
+  "samples": [
+    {
+      "name": "valid",
+      "title": "Signed SAML response, in date",
+      "file": "saml-valid.xml",
+      "args": [
+        "--metadata",
+        "{dir}/idp-metadata.xml",
+        "--expect-issuer",
+        "https://idp.example.com/realms/example",
+        "--expect-audience",
+        "https://sp.example.com/saml/metadata",
+        "--expect-destination",
+        "https://sp.example.com/saml/acs",
+        "--expect-recipient",
+        "https://sp.example.com/saml/acs",
+        "--expect-in-response-to",
+        "_req-4f1c2a9e",
+        "--now",
+        "2026-03-02T12:00:00Z"
+      ]
+    },
+    {
+      "name": "expired",
+      "title": "OIDC ID token, expired 3 h ago",
+      "file": "jwt-expired.txt",
+      "args": [
+        "--jwks",
+        "{dir}/jwks.json",
+        "--expect-issuer",
+        "https://idp.example.com/realms/example",
+        "--expect-audience",
+        "example-rp",
+        "--client-id",
+        "example-rp",
+        "--nonce",
+        "n-0S6_WzA2Mj",
+        "--expect-alg",
+        "RS256",
+        "--now",
+        "2026-03-02T12:00:00Z"
+      ]
+    },
+    {
+      "name": "rotation",
+      "title": "Lab capture, IdP mid cert rotation",
+      "file": "saml-response.xml",
+      "args": [
+        "--cert",
+        "{dir}/sp-pinned-cert.pem",
+        "--expect-issuer",
+        "https://idlab.home:8180/realms/idlab",
+        "--expect-audience",
+        "https://idlab.home:8181/saml/metadata",
+        "--expect-destination",
+        "https://idlab.home:8181/saml/acs",
+        "--expect-in-response-to",
+        "ONELOGIN_55d0484f0a7a2fbfbc1789acd5925dee473859c5",
+        "--now",
+        "2026-10-17T13:34:19Z"
+      ]
+    },
+    {
+      "name": "xsw",
+      "title": "SAML signature wrapping (XSW)",
+      "file": "saml-xsw.xml",
+      "args": [
+        "--metadata",
+        "{dir}/idp-metadata.xml",
+        "--expect-issuer",
+        "https://idp.example.com/realms/example",
+        "--expect-audience",
+        "https://sp.example.com/saml/metadata",
+        "--expect-destination",
+        "https://sp.example.com/saml/acs",
+        "--expect-recipient",
+        "https://sp.example.com/saml/acs",
+        "--expect-in-response-to",
+        "_req-4f1c2a9e",
+        "--now",
+        "2026-03-02T12:00:00Z"
+      ]
+    }
+  ]
+}

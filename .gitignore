@@ -16,11 +16,13 @@ dist/
 .personal-patterns
 
 # Keys and certificates: never committed, except public material in
-# samples/lab/ (sanitised captures). Generated samples are rebuilt at run time.
+# samples/lab/ (sanitised captures) and the demo samples bundled in the package.
+# Generated samples are rebuilt at run time.
 *.pem
 *.key
 *.p12
 *.pfx
 !samples/lab/*.pem
 !samples/lab/**/*.pem
+!src/token_inspector/demo_samples/**/*.pem
 samples/generated/

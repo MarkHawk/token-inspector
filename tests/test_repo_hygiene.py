@@ -1,7 +1,8 @@
 """Nothing private is committed: no private IPv4 addresses, no home
 directories other than /home/pi, no private keys, no personal strings from
 the local .personal-patterns file (absent in CI), and no key files outside
-samples/lab. Checks tracked files and new files git would add."""
+samples/lab and the bundled demo samples. Checks tracked files and new files
+git would add."""
 
 import pathlib
 import re
@@ -54,11 +55,15 @@ def test_no_personal_patterns():
     assert not problems, f"personal patterns found in: {problems}"
 
 
-def test_no_key_files_outside_lab_samples():
+# The only places a certificate file may be committed: public material only.
+KEY_FILE_DIRS = ("samples/lab/", "src/token_inspector/demo_samples/")
+
+
+def test_no_key_files_outside_lab_and_demo_samples():
     for path in repo_files():
         rel = path.relative_to(ROOT).as_posix()
         if path.suffix in (".pem", ".key", ".p12", ".pfx", ".crt"):
-            assert rel.startswith("samples/lab/"), rel
+            assert rel.startswith(KEY_FILE_DIRS), rel
             assert "PRIVATE KEY" not in path.read_text(errors="replace"), rel
 
 
