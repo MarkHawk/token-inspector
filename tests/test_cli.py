@@ -103,3 +103,96 @@ def test_truncated_jwt_exits_two(samples):
 def test_token_type_override(samples):
     _, out, _ = sample_run(samples, "jwt-access-token.txt", "--token-type", "id")
     assert "ID token (set with --token-type)" in out
+
+
+def test_json_output_structure(samples):
+    import json
+
+    code, out, _ = sample_run(samples, "saml-xsw.xml", "--json")
+    doc = json.loads(out)
+    assert code == EXIT_FAIL == doc["summary"]["exit_code"]
+    assert set(doc) == {"tool", "version", "input", "checked_at", "skew_seconds", "redacted", "decoded",
+                        "findings", "summary"}
+    assert doc["checked_at"] == NOW_ISO
+    assert doc["input"]["kind"] == "saml"
+    cov = next(f for f in doc["findings"] if f["check_id"] == "saml.signature.coverage")
+    assert cov["status"] == "FAIL"
+    # Full IDs in JSON, shortened only in the sentence.
+    full_id = cov["details"]["read_assertion_id"]
+    assert full_id not in cov["summary"]
+    assert any(field["value"] == full_id for s in doc["decoded"] for field in s["fields"])
+    assert doc["summary"]["verdict"].startswith("2 problems to fix")
+
+
+def test_json_includes_runbook_url(samples):
+    import json
+
+    _, out, _ = sample_run(samples, "saml-expired-cert.xml", "--json")
+    f = next(f for f in json.loads(out)["findings"] if f["check_id"] == "saml.cert.validity")
+    assert f["runbook"] == "01-expired-signing-cert"
+    assert f["runbook_url"].endswith("/runbooks/01-expired-signing-cert.md")
+
+
+def test_every_sample_through_the_cli(samples):
+    """The CLI exit status agrees with each sample's recorded expectations."""
+    for name in samples.names():
+        code, out, err = sample_run(samples, name)
+        expect = samples.meta(name)["expect"]
+        assert code in (EXIT_OK, EXIT_FAIL), (name, err)
+        if "FAIL" in expect.values():
+            assert code == EXIT_FAIL, name
+
+
+def test_pick_chooses_among_several_tokens(samples):
+    import json
+
+    jwt_a = samples.read("jwt-valid.txt").decode().strip()
+    jwt_b = samples.read("jwt-expired.txt").decode().strip()
+    har = {"log": {"entries": [
+        {"request": {"method": "POST", "url": "https://idp.example.com/token"},
+         "response": {"content": {"text": json.dumps({"id_token": jwt_a})}}},
+        {"request": {"method": "POST", "url": "https://idp.example.com/token"},
+         "response": {"content": {"text": json.dumps({"id_token": jwt_b})}}},
+    ]}}
+    args = samples.args("jwt-valid.txt")
+    code, out, _ = run("--token", json.dumps(har), *args)
+    assert code == EXIT_OK and "1 more token(s); use --pick N" in out
+    code, out, _ = run("--token", json.dumps(har), "--pick", "2", *args)
+    assert code == EXIT_FAIL and "HAR entry 2" in out
+    code, _, err = run("--token", json.dumps(har), "--pick", "3", *args)
+    assert code == EXIT_ERROR and "holds 2 token(s)" in err
+
+
+def test_skew_flag(samples):
+    code, out, _ = sample_run(samples, "saml-skew-future.xml", "--skew", "300")
+    assert "WARN  Not before" in out
+
+
+def test_saml_metadata_passed_as_input_is_explained(samples):
+    code, _, err = run(str(samples.path("idp-metadata.xml")))
+    assert code == EXIT_ERROR and "pass it with --metadata" in err
+
+
+def test_cert_flag(samples):
+    code, out, _ = run(str(samples.path("saml-valid.xml")), "--cert", str(samples.path("idp-current.pem")))
+    assert code == EXIT_OK and "certificate idp-current.pem" in out
+
+
+def test_help_runs(capsys):
+    import pytest
+
+    with pytest.raises(SystemExit) as exc:
+        main(["--help"])
+    assert exc.value.code == 0 and "--redact" in capsys.readouterr().out
+
+
+def test_module_entry_point(samples):
+    import subprocess
+    import sys
+
+    result = subprocess.run(
+        [sys.executable, "-m", "token_inspector", "--now", NOW_ISO, str(samples.path("jwt-valid.txt")),
+         *samples.args("jwt-valid.txt")],
+        capture_output=True, text=True, check=False,
+    )
+    assert result.returncode == 0 and "Verdict: no problems found" in result.stdout
