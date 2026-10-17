@@ -31,7 +31,7 @@ def render_text(report, colour=False):
 
     out = [f"token-inspector {__version__}"]
     where = report.container if report.container != "pasted value" else "pasted value"
-    out.append(f"Input:      {KIND_LABEL.get(report.kind, report.kind)}, {report.encoding}, {where}")
+    out.append(f"Input:      {report.label or KIND_LABEL.get(report.kind, report.kind)}, {report.encoding}, {where}")
     if report.location not in ("input",):
         out.append(f"Found in:   {report.location}")
     if report.other_tokens:

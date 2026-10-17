@@ -13,9 +13,9 @@ ENCODINGS = {
     "saml-valid-redirect.txt": ("saml", "deflate + base64 (HTTP-Redirect binding)", "URL"),
     "saml-valid.har": ("saml", "base64 (HTTP-POST binding)", "HAR file"),
     "saml-valid.saml-tracer.json": ("saml", "base64 (HTTP-POST binding)", "SAML-tracer export"),
-    "jwt-valid.txt": ("jwt", "compact JWS (JWT)", "pasted value"),
-    "jwt-valid.har": ("jwt", "compact JWS (JWT)", "HAR file"),
-    "jwt-encrypted.txt": ("jwe", "compact JWE (encrypted JWT)", "pasted value"),
+    "jwt-valid.txt": ("jwt", "compact JWS", "pasted value"),
+    "jwt-valid.har": ("jwt", "compact JWS", "HAR file"),
+    "jwt-encrypted.txt": ("jwe", "compact JWE", "pasted value"),
 }
 
 

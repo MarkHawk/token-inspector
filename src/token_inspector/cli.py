@@ -9,6 +9,7 @@ from token_inspector import __version__
 from token_inspector.analyse import analyse
 from token_inspector.common import Options
 from token_inspector.inputs import InputError, detect, read_input
+from token_inspector.jwt_parse import JwtParseError
 from token_inspector.keys import KeyFileError, load_certs, load_jwks, load_metadata
 from token_inspector.render import render_text, use_colour
 from token_inspector.saml_parse import SamlParseError
@@ -41,6 +42,7 @@ def build_parser():
     exp.add_argument("--expect-alg", metavar="ALG", help="expected JWT algorithm, for example RS256")
     exp.add_argument("--nonce", help="nonce sent in the OIDC authentication request")
     exp.add_argument("--client-id", help="OIDC client ID (for azp)")
+    exp.add_argument("--token-type", choices=["id", "access"], help="treat the JWT as an ID or access token (default: guess)")
     exp.add_argument("--require-claim", action="append", default=[], metavar="NAME", help="claim that must be present; repeatable")
 
     t = p.add_argument_group("time")
@@ -73,6 +75,7 @@ def build_options(args):
         nonce=args.nonce,
         client_id=args.client_id,
         required_claims=args.require_claim,
+        token_type=args.token_type,
     )
     sources = []
     if args.metadata:
@@ -102,7 +105,7 @@ def main(argv=None, stdin=None, stdout=None, stderr=None):
         token = tokens[args.pick - 1]
         report = analyse(token, opts)
         report.other_tokens = len(tokens) - 1
-    except (InputError, KeyFileError, SamlParseError, XMLRejected, NotImplementedError) as exc:
+    except (InputError, KeyFileError, SamlParseError, JwtParseError, XMLRejected) as exc:
         print(f"token-inspector: {exc}", file=stderr)
         return EXIT_ERROR
     stdout.write(render_text(report, colour=use_colour(stdout)))

@@ -30,6 +30,7 @@ class Report:
     location: str
     now: object
     skew: int
+    label: str = None  # e.g. "SAML Response", "ID token (JWT)"
     sections: list = field(default_factory=list)  # [(title, [(label, value), ...]), ...]
     findings: list = field(default_factory=list)
     other_tokens: int = 0

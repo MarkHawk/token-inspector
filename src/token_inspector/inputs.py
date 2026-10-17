@@ -23,8 +23,8 @@ MAX_INPUT_BYTES = 50 * 1024 * 1024
 ENC_RAW_XML = "raw XML"
 ENC_POST = "base64 (HTTP-POST binding)"
 ENC_REDIRECT = "deflate + base64 (HTTP-Redirect binding)"
-ENC_JWT = "compact JWS (JWT)"
-ENC_JWE = "compact JWE (encrypted JWT)"
+ENC_JWT = "compact JWS"
+ENC_JWE = "compact JWE"
 
 TOKEN_PARAMS = ("SAMLResponse", "id_token", "access_token")
 

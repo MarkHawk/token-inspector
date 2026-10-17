@@ -35,6 +35,7 @@ class Options:
     jwks: dict = None
     jwks_source: str = None
     now_given: bool = False
+    token_type: str = None
 
 
 def mismatch_hint(actual, expected):
@@ -98,14 +99,16 @@ def match_finding(check_id, title, actual, expected, expected_flag, what, next_s
     )
 
 
-def not_before_finding(check_id, title, when, attr, opts, subject="It"):
+def not_before_finding(check_id, title, when, attr, opts, subject="It", pass_text=None, missing_text=None,
+                       future_text=None):
     """Check a 'not valid before' time (SAML NotBefore, JWT nbf or iat)."""
     if when is None:
-        return Finding(check_id, Status.SKIP, title, f"No {attr} is set (it is optional).")
+        return Finding(check_id, Status.SKIP, title, missing_text or f"No {attr} is set (it is optional).")
     ahead = (when - opts.now).total_seconds()
     details = {"value": when, "seconds_in_future": max(ahead, 0)}
     if ahead <= 0:
-        return Finding(check_id, Status.PASS, title, f"{attr} {utc_relative(when, opts.now)} has passed.", details=details)
+        text = pass_text or f"{attr} {utc_relative(when, opts.now)} has passed."
+        return Finding(check_id, Status.PASS, title, text.format(when=utc_relative(when, opts.now)), details=details)
     if ahead <= opts.skew:
         return Finding(
             check_id,
@@ -130,7 +133,7 @@ def not_before_finding(check_id, title, when, attr, opts, subject="It"):
         check_id,
         Status.FAIL,
         title,
-        f"{subject} is not valid yet: {attr} is {utc(when)}, {duration(ahead)} from now. {cause}",
+        f"{future_text or subject + ' is not valid yet'}: {attr} is {utc(when)}, {duration(ahead)} from now. {cause}",
         "Compare the clocks on the IdP and the receiving server with a reliable UTC source and fix NTP. "
         "Raising the skew allowance only hides the problem.",
         runbooks.CLOCK_SKEW,

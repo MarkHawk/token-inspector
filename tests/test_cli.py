@@ -64,3 +64,42 @@ def test_verdict_wording():
     assert verdict(P, W) == "Verdict: no failures, 1 warning to review (0 FAIL, 1 WARN, 1 PASS, 0 SKIP)"
     assert verdict(F, P) == "Verdict: 1 problem to fix (1 FAIL, 0 WARN, 1 PASS, 0 SKIP)"
     assert verdict(F, F, W) == "Verdict: 2 problems to fix, 1 warning to review (2 FAIL, 1 WARN, 0 PASS, 0 SKIP)"
+
+
+class FakeStdin(io.StringIO):
+    def isatty(self):
+        return False
+
+
+def test_valid_jwt_from_stdin(samples):
+    token = samples.read("jwt-valid.txt").decode()
+    code, out, _ = run("-", *samples.args("jwt-valid.txt"), stdin=FakeStdin(token))
+    assert code == EXIT_OK
+    assert "Input:      ID token (JWT), compact JWS, pasted value" in out
+    assert "Verdict: no problems found" in out
+
+
+def test_jwt_from_har(samples):
+    code, out, _ = sample_run(samples, "jwt-valid.har")
+    assert code == EXIT_OK and "HAR file" in out and "Found in:   HAR entry 1" in out
+
+
+def test_expired_jwt_exits_one(samples):
+    code, out, _ = sample_run(samples, "jwt-expired.txt")
+    assert code == EXIT_FAIL and "FAIL  Expiry (exp)" in out
+
+
+def test_encrypted_jwt_is_a_warning_not_an_error(samples):
+    code, out, _ = sample_run(samples, "jwt-encrypted.txt")
+    assert code == EXIT_OK and "Encrypted JWT (JWE)" in out and "WARN  Encrypted token" in out
+
+
+def test_truncated_jwt_exits_two(samples):
+    head = samples.read("jwt-valid.txt").decode().split(".")[0]
+    code, _, err = run("--token", head + ".bm90IGpzb24.c2ln")
+    assert code == EXIT_ERROR and "not valid JSON" in err
+
+
+def test_token_type_override(samples):
+    _, out, _ = sample_run(samples, "jwt-access-token.txt", "--token-type", "id")
+    assert "ID token (set with --token-type)" in out
