@@ -39,7 +39,7 @@ reading it:
   logins (`capture_public` runs first, then `capture_saml`/`capture_oidc`), and
   the public documents are read with plain GETs that never sign a token. The
   first signing operation is the SAML login, which is where Keycloak minted the
-  fallback. So the JWKS was fetched before the fallback key existed — which is
+  fallback. So the JWKS was fetched before the fallback key existed, which is
   exactly why it is absent from the captured JWKS and metadata.
 - `sp-pinned-cert.pem` is the certificate the SP had pinned during the break:
   the expired CA-signed signing certificate (public cert only), extracted from
@@ -54,8 +54,8 @@ reading it:
 the lab by its `LAB_HOST` name (for example `idlab.home`), the same name that
 appears in the issuer and audience, so the signed URLs stay intact. If the
 machine you capture from can't resolve that name, point it at wherever the lab
-publishes its ports by adding a line to `/etc/hosts` — when the lab runs on the
-same machine, that's loopback:
+publishes its ports by adding a line to `/etc/hosts`. When the lab runs on the
+same machine, that is loopback:
 
 ```
 127.0.0.1 idlab.home
