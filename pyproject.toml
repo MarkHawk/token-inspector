@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "token-inspector"
+version = "0.1.0"
+description = "Offline SAML and OIDC/JWT troubleshooting for support engineers"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    "cryptography>=50",
+    "signxml>=5.1",
+    "lxml>=6",
+    "defusedxml>=0.7.1",
+    "PyJWT>=2.15",
+]
+
+[project.scripts]
+token-inspector = "token_inspector.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"

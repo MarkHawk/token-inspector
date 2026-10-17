@@ -1,0 +1,25 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Secrets and local config
+.env
+.env.*
+!.env.example
+.claude/settings.local.json
+.personal-patterns
+
+# Keys and certificates: never committed, except public material in
+# samples/lab/ (sanitised captures). Generated samples are rebuilt at run time.
+*.pem
+*.key
+*.p12
+*.pfx
+!samples/lab/*.pem
+samples/generated/
