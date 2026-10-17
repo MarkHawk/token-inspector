@@ -5,7 +5,7 @@ import datetime as dt
 import os
 import sys
 
-from token_inspector import __version__
+from token_inspector import __version__, demo
 from token_inspector.analyse import analyse
 from token_inspector.common import Options
 from token_inspector.inputs import InputError, detect, read_input
@@ -26,7 +26,9 @@ def build_parser():
     p = argparse.ArgumentParser(
         prog="token-inspector",
         description="Decode a SAML response or a JWT and explain what is wrong with it. Fully offline.",
-        epilog="Exit status: 0 no failed checks, 1 at least one FAIL, 2 the input or a key file could not be used.",
+        epilog="Exit status: 0 no failed checks, 1 at least one FAIL, 2 the input or a key file could not be used. "
+        "New to the tool? Run 'token-inspector demo' to see it on bundled samples "
+        "(to inspect a file called demo, write ./demo).",
     )
     p.add_argument("file", nargs="?", help="file to read; '-' or omit for stdin")
     p.add_argument("--token", help="the token or SAMLResponse value itself, instead of a file")
@@ -126,21 +128,30 @@ def build_options(args):
     return opts
 
 
+def inspect(args, stdin=None):
+    """Read, detect and analyse the input described by parsed args. Returns a Report."""
+    tokens = detect(read_input(args.file, args.token, stdin))
+    if not 1 <= args.pick <= len(tokens):
+        raise InputError(f"--pick {args.pick}: the input holds {len(tokens)} token(s)")
+    token = tokens[args.pick - 1]
+    note = discover_trust(args, token)
+    opts = build_options(args)
+    report = analyse(token, opts)
+    report.other_tokens = len(tokens) - 1
+    if note:
+        report.notes.append(note)
+    return report
+
+
 def main(argv=None, stdin=None, stdout=None, stderr=None):
     stdout = stdout or sys.stdout
     stderr = stderr or sys.stderr
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == ["demo"]:
+        return demo.run_demo(argv[1:], stdout, stderr, sys.modules[__name__])
     args = build_parser().parse_args(argv)
     try:
-        tokens = detect(read_input(args.file, args.token, stdin))
-        if not 1 <= args.pick <= len(tokens):
-            raise InputError(f"--pick {args.pick}: the input holds {len(tokens)} token(s)")
-        token = tokens[args.pick - 1]
-        note = discover_trust(args, token)
-        opts = build_options(args)
-        report = analyse(token, opts)
-        report.other_tokens = len(tokens) - 1
-        if note:
-            report.notes.append(note)
+        report = inspect(args, stdin)
     except (InputError, KeyFileError, SamlParseError, JwtParseError, XMLRejected) as exc:
         print(f"token-inspector: {exc}", file=stderr)
         return EXIT_ERROR
