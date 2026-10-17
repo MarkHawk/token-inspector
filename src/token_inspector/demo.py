@@ -51,7 +51,9 @@ def shown_command(sample):
 
 
 def one_line(report):
-    """(status, text) summarising a report: the count and the first problem."""
+    """(status, text) summarising a report: its likely cause, or else the count and the first problem."""
+    if report.likely_cause:
+        return Status.FAIL.value, f"likely cause: {report.likely_cause.label}"
     for status, noun in ((Status.FAIL, "problem"), (Status.WARN, "warning")):
         titles = [f.title for f in report.findings if f.status == status]
         if titles:

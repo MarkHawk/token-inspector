@@ -44,7 +44,7 @@
     },
     {
       "name": "rotation",
-      "title": "Lab capture, IdP mid cert rotation",
+      "title": "Lab capture, mid key rotation",
       "file": "saml-response.xml",
       "args": [
         "--cert",
@@ -63,7 +63,7 @@
     },
     {
       "name": "xsw",
-      "title": "SAML signature wrapping (XSW)",
+      "title": "Forged SAML response",
       "file": "saml-xsw.xml",
       "args": [
         "--metadata",

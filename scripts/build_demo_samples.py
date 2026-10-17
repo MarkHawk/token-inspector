@@ -32,7 +32,7 @@ DEMO_NOW = "2026-03-02T12:00:00Z"
 SYNTHETIC = [
     ("valid", "Signed SAML response, in date", "saml-valid.xml", "idp-metadata.xml"),
     ("expired", "OIDC ID token, expired 3 h ago", "jwt-expired.txt", "jwks.json"),
-    ("xsw", "SAML signature wrapping (XSW)", "saml-xsw.xml", "idp-metadata.xml"),
+    ("xsw", "Forged SAML response", "saml-xsw.xml", "idp-metadata.xml"),
 ]
 
 
@@ -71,7 +71,7 @@ def build():
     folder.mkdir()
     for file in ("saml-response.xml", "sp-pinned-cert.pem"):
         shutil.copy(LAB / file, folder / file)
-    samples.insert(2, {"name": "rotation", "title": "Lab capture, IdP mid cert rotation",
+    samples.insert(2, {"name": "rotation", "title": "Lab capture, mid key rotation",
                        "file": "saml-response.xml", "args": lab_args()})
     (OUT / "demo.json").write_text(json.dumps({"samples": samples}, indent=2) + "\n")
     return samples

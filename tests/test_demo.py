@@ -35,10 +35,18 @@ def test_summary_has_one_line_per_sample():
     assert code == EXIT_OK and err == ""
     assert verdicts(out) == {
         "valid": ("PASS", "no problems found"),
-        "expired": ("FAIL", "1 problem: Expiry (exp)"),
-        "rotation": ("FAIL", "5 problems: Response signature +4 more"),
-        "xsw": ("FAIL", "2 problems: Assertion signature +1 more"),
+        "expired": ("FAIL", "likely cause: the token is simply old"),
+        "rotation": ("FAIL", "likely cause: key rotation, trusted cert expired"),
+        "xsw": ("FAIL", "likely cause: signature wrapping (XSW)"),
     }
+
+
+def test_summary_falls_back_to_the_first_problem_without_a_cause():
+    from token_inspector.findings import Finding, Report, Status
+
+    report = Report("saml", "", "", "", None, 60, findings=[
+        Finding("a", Status.FAIL, "Issuer", "s"), Finding("b", Status.FAIL, "Audience", "s")])
+    assert demo.one_line(report) == ("FAIL", "2 problems: Issuer +1 more")
 
 
 def test_summary_says_how_to_see_a_full_report():
@@ -127,3 +135,14 @@ def test_samples_are_packaged():
 
     data = tomllib.loads((ROOT / "pyproject.toml").read_text())["tool"]["setuptools"]["package-data"]
     assert "demo_samples/*/*" in data["token_inspector"]
+
+
+def test_bundle_titles_match_the_build_script():
+    """demo.json is built by scripts/build_demo_samples.py, so the two must agree."""
+    from conftest import load_script
+
+    build = load_script("build_demo_samples")
+    titles = {s["name"]: s["title"] for s in demo.load_samples(BUNDLE)}
+    for name, title, *_ in build.SYNTHETIC:
+        assert titles[name] == title
+    assert f'"title": "{titles["rotation"]}"' in (ROOT / "scripts" / "build_demo_samples.py").read_text()
