@@ -1,100 +1,91 @@
 # token-inspector
 
 Decode a SAML response or a JWT and explain, in plain English, why a single
-sign-on login is failing. It runs fully offline: it reads only the files you
-give it and never calls out to the issuer or anywhere else, so it is safe on a
-locked-down support laptop and a pasted token cannot trigger any network
-traffic.
+sign-on login is failing. It runs fully offline: it reads only local files and
+never calls out to the issuer or anywhere else, so it is safe on a locked-down
+support laptop and a pasted token cannot trigger any network traffic.
 
-## What it looks like
+## Try it in 1 minute
 
-Point it at a captured SAML response, give it the certificate the service
-provider trusts, and it reports every check with a verdict. This runs against a
-committed sample, so you can reproduce it exactly from a clone:
-
-```
-$ token-inspector samples/lab/expired-signing-cert/saml-response.xml \
-    --cert samples/lab/expired-signing-cert/sp-pinned-cert.pem \
-    --expect-issuer https://idlab.home:8180/realms/idlab \
-    --expect-audience https://idlab.home:8181/saml/metadata \
-    --now 2026-10-17T13:34:19Z
-
-== Checks ==
-  PASS  Response status              Success.
-  FAIL  Response signature           The signature does not match the certificate from certificate
-                                     sp-pinned-cert.pem. It was made with a different certificate
-                                     (included in the message), so the IdP has most likely rotated
-                                     its signing certificate and the SP still trusts the old one.
-  PASS  Signing certificate dates    Valid until 2036-10-17 13:34:20 UTC (another 3653 days).
-  FAIL  Trusted certificate dates    The certificate the SP trusts (from certificate
-                                     sp-pinned-cert.pem) expired on 2026-10-17 13:34:16 UTC, 3 s
-                                     ago. The IdP is now signing with a different certificate, so
-                                     the SP must be given the IdP's current certificate.
-  FAIL  Certificate matches trusted  The IdP signed with a certificate that is not in certificate
-                                     sp-pinned-cert.pem.
-  ...
-Verdict: 5 problems to fix (5 FAIL, 0 WARN, 10 PASS, 0 SKIP)
-```
-
-This capture was taken while the identity provider was mid-rotation: its pinned
-signing certificate had expired, so it had fallen back to a freshly generated
-key. The signature itself verifies against the new key, but the certificate the
-service provider still trusts has lapsed, and the two no longer match. The tool
-separates those facts out so the person on the ticket can see exactly what to
-fix. The full story is in
-[`samples/lab/expired-signing-cert/`](samples/lab/expired-signing-cert).
-
-## Install
-
-Needs Python 3.12 or newer. Install into a virtual environment:
+From a clone, with Python 3.12 or newer:
 
 ```
 python3 -m venv venv
-venv/bin/pip install -e .
+source venv/bin/activate
+pip install -e .
 ```
 
-That puts a `token-inspector` command in `venv/bin`. Activate the environment
-(`source venv/bin/activate`) if you would rather call it by name.
-
-## Usage
-
-Give it a file, or `-` to read from standard input, or paste the value with
-`--token`. It works out whether the input is a SAML response or a JWT, and
-decodes base64, deflate and JWT compact form as needed. The flags you reach for
-most:
+Then point it at a real capture that ships with the repository:
 
 ```
-# SAML, checked against the IdP's metadata
-token-inspector saml-response.xml --metadata idp-metadata.xml \
-    --expect-issuer <IdP entity ID> \
-    --expect-audience <SP entity ID> \
-    --expect-destination <SP ACS URL> \
-    --expect-in-response-to <AuthnRequest ID from the SP log>
+token-inspector samples/lab/expired-signing-cert/saml-response.xml
+```
 
-# or against a single certificate the SP has pinned
-token-inspector saml-response.xml --cert sp-pinned-cert.pem ...
+```
+Note:       Using idp-metadata.xml found next to the input
+...
+== Checks ==
+  PASS  Response status              Success.
+  FAIL  Response signature           The signature does not match the certificate from metadata
+                                     idp-metadata.xml. It was made with a different certificate
+                                     (included in the message), so the IdP has most likely rotated
+                                     its signing certificate and the SP still trusts the old one.
+  ...
+  PASS  Signing certificate dates    Valid until 2036-10-17 13:34:20 UTC (another 3653 days).
+  FAIL  Trusted certificate dates    The certificate the SP trusts (from metadata idp-metadata.xml)
+                                     expired on 2026-10-17 13:34:16 UTC, ...
+  ...
+Verdict: 6 problems to fix (6 FAIL, 0 WARN, 5 PASS, 4 SKIP)
+```
+
+No flags needed: it found the IdP's metadata in the same folder and checked
+against it. This capture caught the identity provider mid certificate rotation.
+The certificate the service provider trusts has expired, so the IdP has started
+signing with a new one the SP does not know about, and the report says exactly
+that. (It also flags the response as old, because it was captured in the past;
+the report tells you the `--now` value to check it as at the time it was
+issued.)
+
+To see four bundled cases side by side, including a signature wrapping attack:
+
+```
+token-inspector demo
+```
+
+## Common cases
+
+Give it a file, or `-` for standard input, or paste the value with `--token`.
+It works out whether the input is a SAML response or a JWT, and unwraps
+base64, deflate, URLs, HAR files and SAML-tracer exports as needed.
+
+```
+# SAML response, checked against the IdP's metadata
+token-inspector saml-response.xml --metadata idp-metadata.xml
+
+# ... against the certificate the SP has pinned instead
+token-inspector saml-response.xml --cert sp-pinned-cert.pem
 
 # OIDC ID token, checked against the IdP's JWKS
-token-inspector id-token.txt --jwks jwks.json \
-    --expect-issuer <issuer> --client-id <client ID> --nonce <nonce from the login request>
+token-inspector id-token.txt --jwks jwks.json
 
-# an access token
-token-inspector access-token.txt --jwks jwks.json --token-type access --expect-issuer <issuer>
+# a token pasted from a ticket, as at the moment the login failed
+token-inspector --token 'eyJhbGciOi...' --now 2026-10-17T09:15:00Z
+
+# a report safe to paste back into the ticket
+token-inspector saml-response.xml --redact
 ```
 
-Other useful flags:
+If `idp-metadata.xml` or `jwks.json` sits next to the input file, it is used
+automatically, as above; any explicit `--metadata`, `--cert` or `--jwks` takes
+its place.
 
-- `--now <ISO 8601>` evaluate the token as at a given time, for example the
-  moment the ticket says the login failed, instead of now.
-- `--skew <seconds>` clock skew allowance (default 60).
-- `--json` machine-readable output.
-- `--redact` mask emails, names, NameID and `sub` so the report can be pasted
-  into a ticket.
-- `--require-claim <name>` fail if a named claim is absent.
+Checks that compare against what the SP expects (audience, destination,
+nonce and so on) show as SKIP until you give the expected value, for example
+`--expect-audience <SP entity ID>`. The SKIP line names the flag to add.
 
 Exit status is 0 when no check failed, 1 when at least one did, and 2 when the
-input or a key file could not be read. Run `token-inspector --help` for the
-full list.
+input or a key file could not be read. Every flag, including `--json` and the
+full list of expected values, is in [`docs/usage.md`](docs/usage.md).
 
 ## Lab samples
 
@@ -108,6 +99,8 @@ how the captures are produced.
 
 ## Documentation
 
+- [`docs/usage.md`](docs/usage.md) every option, input format and exit code,
+  and the demo subcommand.
 - [`docs/checks.md`](docs/checks.md) every check, and what a pass, warning or
   failure means.
 - [`docs/design.md`](docs/design.md) why the tool is built the way it is, and
