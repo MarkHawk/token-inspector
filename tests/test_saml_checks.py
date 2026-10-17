@@ -64,16 +64,30 @@ def test_rotated_certificate(samples):
 
 def test_coverage(samples):
     assert status(samples, "saml-valid.xml", "saml.signature.coverage") == PASS
-    f = check(samples, "saml-unsigned.xml")["saml.signature.coverage"]
-    assert f.status == FAIL and "Neither" in f.summary
+    r = check(samples, "saml-unsigned.xml")
+    assert r["saml.signature.coverage"].status == FAIL and "Neither" in r["saml.signature.coverage"].summary
+    assert r["saml.signature.assertion"].status == FAIL
+    assert "Turn on assertion signing" in r["saml.signature.assertion"].next_step
+
+
+def test_ids_are_shortened_in_sentences_but_kept_in_details(samples):
+    r = check(samples, "saml-xsw.xml")
+    f = r["saml.signature.coverage"]
+    full = f.details["read_assertion_id"]
+    assert len(full) > 9 and full not in f.summary and full[:9] + "\u2026" in f.summary
+    p = check(samples, "saml-valid.xml")["saml.signature.coverage"]
+    assert p.details["assertion_id"][:9] + "\u2026" in p.summary
+    assert full.startswith("_")
 
 
 def test_xml_signature_wrapping_is_detected(samples):
     r = check(samples, "saml-xsw.xml")
     f = r["saml.signature.coverage"]
     assert f.status == FAIL and "XML Signature Wrapping" in f.summary and "admin@example.com" in f.summary
-    # The signature itself is genuine; only its placement is wrong.
-    assert r["saml.signature.assertion"].status == SKIP
+    a = r["saml.signature.assertion"]
+    assert a.status == FAIL and a.summary == "The assertion an SP would read is not signed."
+    assert "Signature coverage" in a.next_step
+    assert r["saml.signature.response"].status == SKIP
 
 
 def test_algorithm(samples):

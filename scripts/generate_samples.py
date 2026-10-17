@@ -423,7 +423,7 @@ def generate(out, now):
         xml_bytes(build_response(now)),
         "Neither Response nor assertion signed",
         md + SAML_EXPECT,
-        {"saml.signature.coverage": "FAIL"},
+        {"saml.signature.assertion": "FAIL", "saml.signature.coverage": "FAIL"},
     )
     tampered = signed(build_response(now))
     tampered.find(f".//{{{SAML}}}NameID").text = "admin@example.com"
@@ -449,7 +449,7 @@ def generate(out, now):
         xml_bytes(xsw),
         "Signature wrapping: forged unsigned assertion placed before the signed one",
         md + SAML_EXPECT,
-        {"saml.signature.assertion": "SKIP", "saml.signature.coverage": "FAIL"},
+        {"saml.signature.assertion": "FAIL", "saml.signature.coverage": "FAIL"},
     )
 
     # Certificates.

@@ -4,7 +4,7 @@ import datetime as dt
 import os
 import textwrap
 
-from token_inspector import __version__, runbooks
+from token_inspector import __version__
 from token_inspector.findings import Status
 from token_inspector.timefmt import utc, utc_relative
 
@@ -58,9 +58,25 @@ def render_text(report, colour=False):
         if f.next_step and f.status in (Status.FAIL, Status.WARN):
             out += textwrap.wrap(f.next_step, WIDTH, initial_indent=indent + "Next: ", subsequent_indent=indent + "      ")
         if f.runbook:
-            out.append(f"{indent}Runbook: identity-lab {f.runbook} ({runbooks.url(f.runbook)})")
+            out.append(f"{indent}Runbook: identity-lab {f.runbook}")
 
-    counts = ", ".join(f"{report.count(s)} {s.value}" for s in (Status.FAIL, Status.WARN, Status.PASS, Status.SKIP))
-    verdict = "problems found" if report.count(Status.FAIL) else "no failures"
-    out += ["", f"Result: {verdict} ({counts})"]
+    out += ["", verdict_line(report)]
     return "\n".join(out) + "\n"
+
+
+def _plural(n, word):
+    return f"{n} {word}" + ("" if n == 1 else "s")
+
+
+def verdict_line(report):
+    fails, warns = report.count(Status.FAIL), report.count(Status.WARN)
+    counts = ", ".join(f"{report.count(s)} {s.value}" for s in (Status.FAIL, Status.WARN, Status.PASS, Status.SKIP))
+    if fails:
+        verdict = _plural(fails, "problem") + " to fix"
+        if warns:
+            verdict += ", " + _plural(warns, "warning") + " to review"
+    elif warns:
+        verdict = "no failures, " + _plural(warns, "warning") + " to review"
+    else:
+        verdict = "no problems found"
+    return f"Verdict: {verdict} ({counts})"

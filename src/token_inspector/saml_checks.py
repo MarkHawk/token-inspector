@@ -34,6 +34,15 @@ WEAK_URIS = ("http://www.w3.org/2001/04/xmldsig-more#rsa-md5", "http://www.w3.or
 EXPIRY_WARNING_DAYS = 30
 
 
+def short_id(value):
+    """Element IDs are long random strings; sentences show only the first
+    8 characters after any leading underscore, e.g. _64da56e1..."""
+    if value is None:
+        return value
+    keep = 8 + value.startswith("_")
+    return value if len(value) <= keep + 1 else value[:keep] + "\u2026"
+
+
 def short_alg(uri):
     return uri.rsplit("#", 1)[-1] if uri else "unknown"
 
@@ -104,8 +113,22 @@ def signature_checks(msg, sigs, opts):
         findings.append(_signature_finding("saml.signature.response", "Response signature", "Response",
                                            response_sig, assertion_sig is not None, len(sigs), opts))
     if a is not None:
-        findings.append(_signature_finding("saml.signature.assertion", "Assertion signature", "Assertion",
-                                           assertion_sig, response_sig is not None, len(sigs), opts))
+        response_covers = response_sig is not None and response_sig.valid and response_sig.signed_id == msg.id
+        if assertion_sig is None and not response_covers:
+            # Nothing valid covers what the SP reads: that is a failure, not a skip.
+            findings.append(Finding(
+                "saml.signature.assertion",
+                Status.FAIL,
+                "Assertion signature",
+                "The assertion an SP would read is not signed.",
+                "A signature elsewhere in the message covers a different element: see Signature coverage."
+                if any(s.valid for s in sigs)
+                else "Turn on assertion signing for this app in the IdP.",
+                details={"assertion_id": a.id},
+            ))
+        else:
+            findings.append(_signature_finding("saml.signature.assertion", "Assertion signature", "Assertion",
+                                               assertion_sig, response_sig is not None, len(sigs), opts))
     findings.append(_coverage_finding(msg, sigs, response_sig, assertion_sig))
     findings.append(_algorithm_finding(sigs))
     return findings
@@ -200,9 +223,10 @@ def _coverage_finding(msg, sigs, response_sig, assertion_sig):
             check_id,
             Status.FAIL,
             title,
-            f"Several elements share the ID {msg.duplicate_ids[0]!r}, so a signature reference is ambiguous. "
+            f"Several elements share the ID {short_id(msg.duplicate_ids[0])}, so a signature reference is ambiguous. "
             "This is a known signature wrapping technique.",
             "Treat the message as forged. No IdP produces duplicate IDs.",
+            details={"duplicate_ids": msg.duplicate_ids},
         )
     if a is None:
         if response_sig is not None and response_sig.valid:
@@ -225,8 +249,9 @@ def _coverage_finding(msg, sigs, response_sig, assertion_sig):
                 check_id,
                 Status.FAIL,
                 title,
-                f"The assertion an SP would read (ID {a.id}, NameID {a.name_id!r}) is not covered by any valid "
-                f"signature; the only valid signature covers a different element (ID {target}). This is the "
+                f"The assertion an SP would read (ID {short_id(a.id)}, NameID {a.name_id!r}) is not covered by any "
+                f"valid signature; the only valid signature covers a different element (ID {short_id(target)}). "
+                "This is the "
                 "shape of an XML Signature Wrapping (XSW) attack.",
                 "Treat this as a forgery attempt and escalate it as a security incident. Check the SP's SAML "
                 "library is current: patched libraries only read the element the signature covers.",
@@ -246,7 +271,8 @@ def _coverage_finding(msg, sigs, response_sig, assertion_sig):
             "Check which assertion the SP actually reads. Unexpected extra assertions can be a wrapping attempt.",
         )
     return Finding(check_id, Status.PASS, title,
-                   f"The assertion you read (ID {a.id}) is covered by a valid {covered} signature.")
+                   f"The assertion you read (ID {short_id(a.id)}) is covered by a valid {covered} signature.",
+                   details={"assertion_id": a.id, "covered_by": covered_by})
 
 
 def _algorithm_finding(sigs):
