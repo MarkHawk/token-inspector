@@ -34,6 +34,7 @@ class Report:
     sections: list = field(default_factory=list)  # [(title, [(label, value), ...]), ...]
     findings: list = field(default_factory=list)
     other_tokens: int = 0
+    redacted: bool = False
 
     def count(self, status):
         return sum(1 for f in self.findings if f.status == status)

@@ -1,10 +1,11 @@
 """Render a Report as readable text."""
 
 import datetime as dt
+import json
 import os
 import textwrap
 
-from token_inspector import __version__
+from token_inspector import __version__, runbooks
 from token_inspector.findings import Status
 from token_inspector.timefmt import utc, utc_relative
 
@@ -37,6 +38,8 @@ def render_text(report, colour=False):
     if report.other_tokens:
         out.append(f"Note:       the input holds {report.other_tokens} more token(s); use --pick N to choose another")
     out.append(f"Checked at: {utc(report.now)}, clock skew allowance {report.skew} s")
+    if report.redacted:
+        out.append("Redacted:   emails, names, NameID and sub are masked")
 
     for title, rows in report.sections:
         out += ["", f"== {title} =="]
@@ -80,3 +83,65 @@ def verdict_line(report):
     else:
         verdict = "no problems found"
     return f"Verdict: {verdict} ({counts})"
+
+
+def _json_value(v):
+    if isinstance(v, dt.datetime):
+        return v.astimezone(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    if isinstance(v, Status):
+        return v.value
+    if isinstance(v, dict):
+        return {str(k): _json_value(x) for k, x in v.items()}
+    if isinstance(v, (list, tuple)):
+        return [_json_value(x) for x in v]
+    if v is None or isinstance(v, (str, int, float, bool)):
+        return v
+    return str(v)
+
+
+def report_dict(report):
+    """A stable, machine-readable form of the report for --json."""
+    return {
+        "tool": "token-inspector",
+        "version": __version__,
+        "input": {
+            "kind": report.kind,
+            "label": report.label,
+            "encoding": report.encoding,
+            "container": report.container,
+            "location": report.location,
+            "other_tokens": report.other_tokens,
+        },
+        "checked_at": _json_value(report.now),
+        "skew_seconds": report.skew,
+        "redacted": report.redacted,
+        "decoded": [
+            {"section": title, "fields": [{"name": label.strip(), "value": _json_value(value)} for label, value in rows]}
+            for title, rows in report.sections
+        ],
+        "findings": [
+            {
+                "check_id": f.check_id,
+                "status": f.status.value,
+                "title": f.title,
+                "summary": f.summary,
+                "next_step": f.next_step,
+                "runbook": f.runbook,
+                "runbook_url": runbooks.url(f.runbook) if f.runbook else None,
+                "details": _json_value(f.details),
+            }
+            for f in report.findings
+        ],
+        "summary": {
+            "fail": report.count(Status.FAIL),
+            "warn": report.count(Status.WARN),
+            "pass": report.count(Status.PASS),
+            "skip": report.count(Status.SKIP),
+            "verdict": verdict_line(report).removeprefix("Verdict: "),
+            "exit_code": report.exit_code,
+        },
+    }
+
+
+def render_json(report):
+    return json.dumps(report_dict(report), indent=2, ensure_ascii=False) + "\n"

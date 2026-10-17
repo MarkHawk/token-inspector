@@ -11,7 +11,8 @@ from token_inspector.common import Options
 from token_inspector.inputs import InputError, detect, read_input
 from token_inspector.jwt_parse import JwtParseError
 from token_inspector.keys import KeyFileError, load_certs, load_jwks, load_metadata
-from token_inspector.render import render_text, use_colour
+from token_inspector.redact import redact_report
+from token_inspector.render import render_json, render_text, use_colour
 from token_inspector.saml_parse import SamlParseError
 from token_inspector.xmlsafe import XMLRejected
 
@@ -48,6 +49,10 @@ def build_parser():
     t = p.add_argument_group("time")
     t.add_argument("--skew", type=int, default=60, metavar="SECONDS", help="clock skew allowance (default 60)")
     t.add_argument("--now", metavar="ISO8601", help="evaluate as at this UTC time, for example the time of the ticket")
+
+    out = p.add_argument_group("output")
+    out.add_argument("--json", action="store_true", help="print the report as JSON")
+    out.add_argument("--redact", action="store_true", help="mask emails, names, NameID and sub, for pasting into a ticket")
 
     p.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
     return p
@@ -108,5 +113,10 @@ def main(argv=None, stdin=None, stdout=None, stderr=None):
     except (InputError, KeyFileError, SamlParseError, JwtParseError, XMLRejected) as exc:
         print(f"token-inspector: {exc}", file=stderr)
         return EXIT_ERROR
-    stdout.write(render_text(report, colour=use_colour(stdout)))
+    if args.redact:
+        report = redact_report(report)
+    if args.json:
+        stdout.write(render_json(report))
+    else:
+        stdout.write(render_text(report, colour=use_colour(stdout)))
     return report.exit_code
