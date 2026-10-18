@@ -1,9 +1,10 @@
 # token-inspector
 
-Decode a SAML response or a JWT and explain, in plain English, why a single
-sign-on login is failing. It runs fully offline: it reads only local files and
-never calls out to the issuer or anywhere else, so it is safe on a locked-down
-support laptop and a pasted token cannot trigger any network traffic.
+**token-inspector decodes a SAML response or a JWT and explains, in
+plain English, why a single sign-on login is failing.** It runs fully
+offline: it reads only local files and never contacts the issuer or
+anything else, so it's safe on a locked-down support laptop, and a
+pasted token can't trigger any network traffic.
 
 ## Try it in 1 minute
 
