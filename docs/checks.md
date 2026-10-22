@@ -173,6 +173,7 @@ The known patterns, most specific first (the first that fits wins):
 | Pattern | When it applies | Runbook |
 |---|---|---|
 | `signature-wrapping` | A valid signature covers a different element from the assertion an SP would read, or IDs are duplicated: an XSW attack. | |
+| `tampered-signature` | A signature no longer matches the content it signs (a SAML digest mismatch, or a JWT that fails against the key its `kid` names): changed after signing. | |
 | `idp-key-rotation` | The certificate the SP trusts has expired and the IdP signs with a different, still valid one. | 01 |
 | `signing-cert-expired` | The IdP is signing with an expired certificate. | 01 |
 | `kid-not-in-jwks` | The JWT's `kid` is not in the JWKS: a stale JWKS after key rotation. | |

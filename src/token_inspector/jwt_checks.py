@@ -215,6 +215,7 @@ def signature_finding(token, opts):
             "after signing.",
             "Treat the token as forged or corrupted. A token cut short when it was copied fails in the same way, "
             "so check you have all of it, then check nothing between the IdP and the relying party rewrites it.",
+            details={"kid": candidates[0].get("kid"), "tampered": True},
         )
     return Finding(
         check_id,

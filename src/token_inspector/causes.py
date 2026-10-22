@@ -68,6 +68,22 @@ def _xsw(fails, report):
     )
 
 
+def _tampered(fails, report):
+    tampered = [c for c in (*SIGNATURE_CHECKS, "jwt.signature") if c in fails and fails[c].details.get("tampered")]
+    if not tampered:
+        return None
+    coverage = ["saml.signature.coverage"] if "saml.signature.coverage" in fails else []
+    return Cause(
+        "tampered-signature",
+        "changed after signing",
+        "The content no longer matches its signature, so the message was changed after it was signed: edited, "
+        "rewritten on the way, or damaged when it was copied.",
+        "Check again with the original value (the base64 SAMLResponse or the whole token, not a reformatted or "
+        "shortened copy). If that still fails, treat it as a forgery and escalate it as a security incident.",
+        explains=[*tampered, *coverage],
+    )
+
+
 def _key_rotation(fails, report):
     trusted = fails.get("saml.cert.trusted_validity")
     if not trusted or not trusted.details.get("signer_differs") or "saml.cert.validity" in fails:
@@ -199,6 +215,6 @@ def _simply_old(fails, report):
 
 # Most specific first: a security problem outranks everything, and a cert or
 # key problem outranks the age of the capture it was found in.
-PATTERNS = [_xsw, _key_rotation, _signing_cert_expired, _kid_not_in_jwks, _other_client, _short_lifetime, _clock_skew,
-            _simply_old]
+PATTERNS = [_xsw, _tampered, _key_rotation, _signing_cert_expired, _kid_not_in_jwks, _other_client, _short_lifetime,
+            _clock_skew, _simply_old]
 TIMING_PATTERNS = (_short_lifetime, _clock_skew, _simply_old)

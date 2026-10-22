@@ -40,6 +40,8 @@ def cause(samples, name, *extra, **kw):
     ("oidc-azp-mismatch.txt", "issued-to-another-client", ["oidc.azp"]),
     ("jwt-unknown-kid.txt", "kid-not-in-jwks", ["jwt.kid", "jwt.signature"]),
     ("jwt-short-lifetime.txt", "short-lifetime", ["jwt.time.exp"]),
+    ("saml-tampered.xml", "tampered-signature", ["saml.signature.assertion", "saml.signature.coverage"]),
+    ("jwt-tampered.txt", "tampered-signature", ["jwt.signature"]),
 ])
 def test_known_patterns(samples, name, pattern, explains):
     c = cause(samples, name)
@@ -64,8 +66,8 @@ def test_runbook_link_where_one_exists(samples, name, runbook):
 
 
 @pytest.mark.parametrize("name", [
-    "saml-tampered.xml", "saml-unsigned.xml", "saml-rotated-cert.xml", "saml-wrong-audience.xml",
-    "saml-status-responder.xml", "jwt-tampered.txt", "jwt-hs256.txt", "oidc-wrong-nonce.txt",
+    "saml-unsigned.xml", "saml-rotated-cert.xml", "saml-wrong-audience.xml",
+    "saml-status-responder.xml", "jwt-hs256.txt", "oidc-wrong-nonce.txt",
 ])
 def test_no_pattern_means_nothing_extra(samples, name):
     assert cause(samples, name) is None
@@ -79,7 +81,7 @@ def test_valid_has_no_cause(samples):
 def test_an_old_capture_does_not_hide_a_real_problem(samples):
     """Hours later, a tampered response is also expired, but its age is not why it fails."""
     c = cause(samples, "saml-tampered.xml", now="2026-03-02T18:00:00Z")
-    assert c is None
+    assert c["pattern"] == "tampered-signature" and c["not_explained"] == ["saml.time.not_on_or_after"]
 
 
 def test_a_specific_cause_still_wins_on_an_old_capture(samples):

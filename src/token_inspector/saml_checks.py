@@ -168,7 +168,7 @@ def _signature_finding(check_id, title, what, sig, other_signed, signature_count
             "Something modified the XML between the IdP and the SP: a proxy or WAF rewriting the body, or a "
             "manual edit. Reformatting or pretty-printing the XML before pasting it breaks the digest too, so "
             "use the original base64 SAMLResponse value.",
-            details={"error": sig.error},
+            details={"error": sig.error, "tampered": True},
         )
     if sig.error_kind == KEY_ERROR and sig.embedded_valid:
         return Finding(
