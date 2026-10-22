@@ -235,7 +235,8 @@ def time_findings(token, opts):
     issued = _time(c, "iat")
     findings = [
         expiry_finding("jwt.time.exp", "Expiry (exp)", _time(c, "exp"), "exp", opts, issued=issued,
-                       subject="The token", missing_status=Status.FAIL if is_id else Status.WARN),
+                       subject="The token", missing_status=Status.FAIL if is_id else Status.WARN,
+                       check_lifetime=True),
         not_before_finding("jwt.time.nbf", "Not before (nbf)", _time(c, "nbf"), "nbf", opts, subject="The token"),
         not_before_finding("jwt.time.iat", "Issued at (iat)", issued, "iat", opts, subject="The token",
                            pass_text="Issued {when}.", missing_text="No iat claim.",

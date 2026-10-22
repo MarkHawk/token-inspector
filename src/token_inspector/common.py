@@ -15,6 +15,15 @@ from token_inspector.timefmt import duration, near_whole_hours, utc, utc_relativ
 # two clocks disagreeing rather than a genuinely old or future token.
 SKEW_SUSPECT_SECONDS = 15 * 60
 
+# A token issued to live this long or less (exp minus iat) is short enough
+# that its lifetime, not clock skew, most likely explains a recent expiry.
+# Common IdP defaults are 5 minutes or more (Keycloak access tokens 300 s,
+# others about an hour), so a default never trips it, while at 2 minutes or
+# less normal redirects, a slow API call or a few seconds of clock difference
+# use up much of the token's life. It also catches a lifespan entered in
+# seconds where minutes were meant.
+SHORT_LIFETIME_SECONDS = 120
+
 
 @dataclass
 class Options:
@@ -156,8 +165,12 @@ def not_before_finding(check_id, title, when, attr, opts, subject="It", pass_tex
 
 
 def expiry_finding(check_id, title, when, attr, opts, issued=None, subject="It", missing_status=Status.WARN,
-                   noun="the token"):
-    """Check an expiry time (SAML NotOnOrAfter, JWT exp)."""
+                   noun="the token", check_lifetime=False):
+    """Check an expiry time (SAML NotOnOrAfter, JWT exp).
+
+    With check_lifetime, a recent expiry of a token issued with a very short
+    lifetime (see SHORT_LIFETIME_SECONDS) is put down to that lifetime rather
+    than to clock skew."""
     if when is None:
         return Finding(
             check_id,
@@ -168,13 +181,32 @@ def expiry_finding(check_id, title, when, attr, opts, issued=None, subject="It",
         )
     left = (when - opts.now).total_seconds()
     details = {"value": when, "seconds_remaining": left}
+    short = None
     if issued is not None:
         details["issued"] = issued
+        if check_lifetime:
+            lifetime = (when - issued).total_seconds()
+            details["lifetime"] = lifetime
+            if 0 < lifetime <= SHORT_LIFETIME_SECONDS:
+                short = f"It was issued with a lifetime of only {duration(lifetime)} (iat {utc(issued)})."
     if left > 0:
         return Finding(check_id, Status.PASS, title, f"Valid for another {duration(left)} ({attr} {utc(when)}).",
                        details=details)
     late = -left
+    if short and late <= SKEW_SUSPECT_SECONDS:
+        details["short_lifetime"] = True
     if late < opts.skew:
+        if short:
+            return Finding(
+                check_id,
+                Status.WARN,
+                title,
+                f"Expired {duration(late)} ago, but that is inside the {opts.skew} s skew allowance. {short}",
+                "A receiver with a stricter allowance will reject it. Check the token lifespan set for this "
+                "client in the IdP, and that the application refreshes its token before it expires.",
+                runbooks.API_BEARER_401,
+                details,
+            )
         return Finding(
             check_id,
             Status.WARN,
@@ -187,6 +219,18 @@ def expiry_finding(check_id, title, when, attr, opts, issued=None, subject="It",
     replay_hint = ""
     if issued is not None and not opts.now_given:
         replay_hint = f" To check it as at the time it was issued, add --now {issued.strftime('%Y-%m-%dT%H:%M:%SZ')}."
+    if short and late <= SKEW_SUSPECT_SECONDS:
+        return Finding(
+            check_id,
+            Status.FAIL,
+            title,
+            f"Expired {duration(late)} ago ({attr} {utc(when)}). {short} That lifetime, not clock skew, is the "
+            "most likely reason: the token runs out almost as soon as it is used.",
+            "Check the token lifespan set for this client in the IdP (a value meant as minutes entered as seconds "
+            "is a common slip), and that the application refreshes its token before it expires." + replay_hint,
+            runbooks.API_BEARER_401,
+            details,
+        )
     if late <= SKEW_SUSPECT_SECONDS:
         return Finding(
             check_id,

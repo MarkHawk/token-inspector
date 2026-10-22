@@ -114,7 +114,13 @@ taken), for an unsupported algorithm, or without a JWKS.
 
 **Expiry (exp).** Whether the token is still within its lifetime. FAIL once
 expired beyond the skew allowance, WARN if expired but within it, and for an ID
-token with no `exp` at all, FAIL (an access token without one is WARN).
+token with no `exp` at all, FAIL (an access token without one is WARN). When
+the token has `iat` too and was issued to live 120 s or less (`exp` minus
+`iat`), an expiry in the last 15 minutes is put down to that short lifetime
+rather than clock skew, the lifetime is shown, and the line links runbook 16.
+120 s is the threshold because common IdP defaults are 5 minutes or more, so a
+default never trips it, while a lifetime of 2 minutes or less is easily used
+up by redirects, a slow API call or a few seconds of clock difference.
 
 **Not before (nbf).** Like the SAML `NotBefore`: FAIL if in the future beyond the
 skew allowance, WARN if within it, SKIP if absent (it is optional).
@@ -171,9 +177,10 @@ The known patterns, most specific first (the first that fits wins):
 | `signing-cert-expired` | The IdP is signing with an expired certificate. | 01 |
 | `kid-not-in-jwks` | The JWT's `kid` is not in the JWKS: a stale JWKS after key rotation. | |
 | `issued-to-another-client` | The JWT's `aud` or `azp` names a different client or API. | 16 |
+| `short-lifetime` | The JWT expired in the last 15 minutes and was issued to live 120 s or less. Also shown when the expiry is only a WARN (inside the skew allowance); the verdict does not change. | 16 |
 | `clock-skew` | A time check missed by more than the skew allowance but less than 15 minutes. | 02 |
 | `old-response`, `old-token` | Expired by more than 15 minutes: an old capture or a replay. | 16 (`old-token` only) |
 
-The two timing patterns only apply when they account for every FAIL, because
+The three timing patterns (`short-lifetime`, `clock-skew` and the old capture) only apply when they account for every FAIL, because
 an expired timestamp says nothing about, say, a broken signature found in the
 same capture. When no pattern fits, the section is left out.

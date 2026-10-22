@@ -49,6 +49,15 @@ def test_summary_falls_back_to_the_first_problem_without_a_cause():
     assert demo.one_line(report) == ("FAIL", "2 problems: Issuer +1 more")
 
 
+def test_summary_of_a_cause_behind_a_warning_says_warn():
+    from token_inspector.causes import Cause
+    from token_inspector.findings import Finding, Report, Status
+
+    report = Report("jwt", "", "", "", None, 60, findings=[Finding("jwt.time.exp", Status.WARN, "Expiry", "s")])
+    report.likely_cause = Cause("short-lifetime", "token lifetime too short", "s.", "f.")
+    assert demo.one_line(report) == ("WARN", "likely cause: token lifetime too short")
+
+
 def test_summary_says_how_to_see_a_full_report():
     _, out, _ = run()
     assert "token-inspector demo <name>" in out and "token-inspector demo xsw" in out

@@ -7,9 +7,14 @@ one sentence and says what to do first. Patterns are tried most specific
 first and the first match wins. When nothing matches, there is no likely
 cause and the report shows nothing extra.
 
-The timing patterns (clock skew, an old capture) only count when they account
-for every FAIL: an expired timestamp says nothing about a broken signature
-found alongside it, so naming it as the cause would mislead.
+The timing patterns (a short token lifetime, clock skew, an old capture) only
+count when they account for every FAIL: an expired timestamp says nothing
+about a broken signature found alongside it, so naming it as the cause would
+mislead.
+
+A short-lived token that expired inside the skew allowance is only a WARN, but
+it has still expired and a stricter receiver rejects it, so that WARN counts
+here as well. It changes only this section, never the verdict.
 """
 
 from dataclasses import dataclass, field
@@ -36,7 +41,8 @@ class Cause:
 
 def likely_cause(report):
     """The Cause behind the report's FAILs, or None when no known pattern fits."""
-    fails = {f.check_id: f for f in report.findings if f.status == Status.FAIL}
+    fails = {f.check_id: f for f in report.findings
+             if f.status == Status.FAIL or (f.status == Status.WARN and f.details.get("short_lifetime"))}
     if not fails:
         return None
     for pattern in PATTERNS:
@@ -131,6 +137,23 @@ def _gap(finding):
     return d.get("seconds_in_future")
 
 
+def _short_lifetime(fails, report):
+    exp = fails.get("jwt.time.exp")
+    if not exp or not exp.details.get("short_lifetime"):
+        return None
+    return Cause(
+        "short-lifetime",
+        "token lifetime too short",
+        f"The token was issued with a lifetime of only {duration(exp.details['lifetime'])} and expired "
+        f"{duration(_gap(exp))} ago, so it runs out before the application has finished using it, which can look "
+        "like clock skew.",
+        "Check the token lifespan set for this client in the IdP (a value meant as minutes entered as seconds is "
+        "a common slip), and that the application refreshes its token before it expires.",
+        runbooks.API_BEARER_401,
+        ["jwt.time.exp"],
+    )
+
+
 def _clock_skew(fails, report):
     gaps = {c: _gap(fails[c]) for c in (*EXPIRY_CHECKS, *NOT_BEFORE_CHECKS) if c in fails}
     explains = [c for c, gap in gaps.items() if gap is not None and gap <= SKEW_SUSPECT_SECONDS]
@@ -176,5 +199,6 @@ def _simply_old(fails, report):
 
 # Most specific first: a security problem outranks everything, and a cert or
 # key problem outranks the age of the capture it was found in.
-PATTERNS = [_xsw, _key_rotation, _signing_cert_expired, _kid_not_in_jwks, _other_client, _clock_skew, _simply_old]
-TIMING_PATTERNS = (_clock_skew, _simply_old)
+PATTERNS = [_xsw, _key_rotation, _signing_cert_expired, _kid_not_in_jwks, _other_client, _short_lifetime, _clock_skew,
+            _simply_old]
+TIMING_PATTERNS = (_short_lifetime, _clock_skew, _simply_old)

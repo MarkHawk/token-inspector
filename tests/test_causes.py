@@ -39,6 +39,7 @@ def cause(samples, name, *extra, **kw):
     ("jwt-wrong-audience.txt", "issued-to-another-client", ["jwt.audience"]),
     ("oidc-azp-mismatch.txt", "issued-to-another-client", ["oidc.azp"]),
     ("jwt-unknown-kid.txt", "kid-not-in-jwks", ["jwt.kid", "jwt.signature"]),
+    ("jwt-short-lifetime.txt", "short-lifetime", ["jwt.time.exp"]),
 ])
 def test_known_patterns(samples, name, pattern, explains):
     c = cause(samples, name)
@@ -52,6 +53,7 @@ def test_known_patterns(samples, name, pattern, explains):
     ("jwt-wrong-audience.txt", "16-api-bearer-401"),
     ("oidc-azp-mismatch.txt", "16-api-bearer-401"),
     ("jwt-expired.txt", "16-api-bearer-401"),
+    ("jwt-short-lifetime.txt", "16-api-bearer-401"),
     ("saml-expired-assertion.xml", None),
     ("saml-xsw.xml", None),
 ])
@@ -91,6 +93,41 @@ def test_old_capture_suggests_now_only_when_not_given(samples):
     no_now = json.loads(run(str(samples.path("jwt-expired.txt")), *samples.args("jwt-expired.txt"), "--json"))
     no_now = no_now["likely_cause"]
     assert no_now["pattern"] == "old-token" and "Re-run with --now " in no_now["first_step"]
+
+
+def test_short_lifetime_named_on_a_warn_without_changing_the_verdict(samples):
+    """At the default 60 s skew, 5 s past exp is a WARN; the cause shows but the verdict and exit code do not move."""
+    out = io.StringIO()
+    code = main([str(samples.path("jwt-short-lifetime.txt")), *samples.args("jwt-short-lifetime.txt"), "--now", NOW_ISO],
+                stdout=out, stderr=io.StringIO())
+    text = out.getvalue()
+    assert code == 0
+    assert "WARN  Expiry (exp)" in text and "lifetime of only 10 s" in text
+    section = text.split("== Likely cause ==")[1]
+    assert "lifetime of only 10 s" in section and "16-api-bearer-401" in section
+    assert "Not explained" not in section
+    assert section.splitlines()[-1].startswith("Verdict: no failures, 1 warning")
+
+
+def test_short_lifetime_beats_clock_skew_with_no_allowance(samples):
+    c = cause(samples, "jwt-short-lifetime.txt", "--skew", "0")
+    assert c["pattern"] == "short-lifetime" and c["runbook"] == "16-api-bearer-401"
+    text = sample(samples, "jwt-short-lifetime.txt", "--skew", "0")
+    assert "FAIL  Expiry (exp)" in text and "02-clock-skew" not in text
+
+
+def test_short_lifetime_long_expired_is_simply_old(samples):
+    assert cause(samples, "jwt-short-lifetime.txt", now="2026-03-02T15:00:00Z")["pattern"] == "old-token"
+
+
+def test_normal_lifetime_recently_expired_is_still_clock_skew(samples):
+    """jwt-valid.txt lives 5 min, above the threshold, so a recent expiry is still put down to the clocks."""
+    assert cause(samples, "jwt-valid.txt", now="2026-03-02T12:10:00Z")["pattern"] == "clock-skew"
+
+
+def test_short_lifetime_does_not_hide_a_real_problem(samples):
+    """A wrong issuer fits no pattern, so the short lifetime must not be named as the cause of it."""
+    assert cause(samples, "jwt-short-lifetime.txt", "--expect-issuer", "https://elsewhere.example.com") is None
 
 
 def lab(*extra):

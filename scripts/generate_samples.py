@@ -587,6 +587,16 @@ def generate(out, now):
         {"jwt.time.iat": "FAIL"},
         runbook="02-clock-skew",
     )
+    w.sample(
+        "jwt-short-lifetime.txt",
+        rs256(id_token_claims(now, iat=int((now - dt.timedelta(seconds=15)).timestamp()),
+                              exp=int((now - dt.timedelta(seconds=5)).timestamp()),
+                              auth_time=int((now - dt.timedelta(seconds=16)).timestamp()))),
+        "Issued with a 10 s lifetime, expired 5 s ago",
+        jw + OIDC_EXPECT,
+        {"jwt.time.exp": "WARN", "jwt.signature": "PASS"},
+        runbook="16-api-bearer-401",
+    )
     none_tok = f"{_b64url({'alg': 'none', 'typ': 'JWT'})}.{_b64url(id_token_claims(now))}.\n"
     w.sample("jwt-alg-none.txt", none_tok, "Unsigned token with alg none", jw + OIDC_EXPECT,
              {"jwt.algorithm": "FAIL", "jwt.signature": "FAIL"})
