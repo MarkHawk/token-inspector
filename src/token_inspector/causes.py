@@ -145,6 +145,24 @@ def _other_client(fails, report):
     )
 
 
+def _saml_audience(fails, report):
+    aud = fails.get("saml.audience")
+    if not aud:
+        return None
+    actual = aud.details.get("actual")
+    shown = ", ".join(repr(v) for v in (actual if isinstance(actual, list) else [actual]) if v is not None)
+    return Cause(
+        "saml-audience-mismatch",
+        "issued for another SP",
+        f"The assertion was issued for a different SP ({shown or 'no audience'}), not this one: the SP entity ID "
+        "configured for this app at the IdP does not match the SP's own.",
+        f"Compare the SP's entity ID ({aud.details.get('expected')!r}) with the Audience URI or Identifier set for "
+        "this app at the IdP, and make them match exactly; a changed SP entity ID or settings copied from another "
+        "environment are the usual reasons.",
+        explains=["saml.audience"],
+    )
+
+
 def _gap(finding):
     """Seconds by which a time check missed (positive), or None."""
     d = finding.details
@@ -215,6 +233,6 @@ def _simply_old(fails, report):
 
 # Most specific first: a security problem outranks everything, and a cert or
 # key problem outranks the age of the capture it was found in.
-PATTERNS = [_xsw, _tampered, _key_rotation, _signing_cert_expired, _kid_not_in_jwks, _other_client, _short_lifetime,
-            _clock_skew, _simply_old]
+PATTERNS = [_xsw, _tampered, _key_rotation, _signing_cert_expired, _kid_not_in_jwks, _other_client, _saml_audience,
+            _short_lifetime, _clock_skew, _simply_old]
 TIMING_PATTERNS = (_short_lifetime, _clock_skew, _simply_old)

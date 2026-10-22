@@ -42,6 +42,7 @@ def cause(samples, name, *extra, **kw):
     ("jwt-short-lifetime.txt", "short-lifetime", ["jwt.time.exp"]),
     ("saml-tampered.xml", "tampered-signature", ["saml.signature.assertion", "saml.signature.coverage"]),
     ("jwt-tampered.txt", "tampered-signature", ["jwt.signature"]),
+    ("saml-wrong-audience.xml", "saml-audience-mismatch", ["saml.audience"]),
 ])
 def test_known_patterns(samples, name, pattern, explains):
     c = cause(samples, name)
@@ -66,12 +67,18 @@ def test_runbook_link_where_one_exists(samples, name, runbook):
 
 
 @pytest.mark.parametrize("name", [
-    "saml-unsigned.xml", "saml-rotated-cert.xml", "saml-wrong-audience.xml",
+    "saml-unsigned.xml", "saml-rotated-cert.xml",
     "saml-status-responder.xml", "jwt-hs256.txt", "oidc-wrong-nonce.txt",
 ])
 def test_no_pattern_means_nothing_extra(samples, name):
     assert cause(samples, name) is None
     assert "Likely cause" not in sample(samples, name)
+
+
+def test_saml_audience_names_both_values(samples):
+    c = cause(samples, "saml-wrong-audience.xml")
+    assert "'https://sp-old.example.com/saml/metadata'" in c["summary"]
+    assert "'https://sp.example.com/saml/metadata'" in c["first_step"]
 
 
 def test_valid_has_no_cause(samples):
