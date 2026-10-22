@@ -43,6 +43,7 @@ def cause(samples, name, *extra, **kw):
     ("saml-tampered.xml", "tampered-signature", ["saml.signature.assertion", "saml.signature.coverage"]),
     ("jwt-tampered.txt", "tampered-signature", ["jwt.signature"]),
     ("saml-wrong-audience.xml", "saml-audience-mismatch", ["saml.audience"]),
+    ("oidc-wrong-nonce.txt", "nonce-mismatch", ["oidc.nonce"]),
 ])
 def test_known_patterns(samples, name, pattern, explains):
     c = cause(samples, name)
@@ -68,7 +69,7 @@ def test_runbook_link_where_one_exists(samples, name, runbook):
 
 @pytest.mark.parametrize("name", [
     "saml-unsigned.xml", "saml-rotated-cert.xml",
-    "saml-status-responder.xml", "jwt-hs256.txt", "oidc-wrong-nonce.txt",
+    "saml-status-responder.xml", "jwt-hs256.txt", "oidc-missing-nonce.txt",
 ])
 def test_no_pattern_means_nothing_extra(samples, name):
     assert cause(samples, name) is None

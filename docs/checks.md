@@ -179,6 +179,7 @@ The known patterns, most specific first (the first that fits wins):
 | `kid-not-in-jwks` | The JWT's `kid` is not in the JWKS: a stale JWKS after key rotation. | |
 | `issued-to-another-client` | The JWT's `aud` or `azp` names a different client or API. | 16 |
 | `saml-audience-mismatch` | The SAML assertion's Audience is not the SP's entity ID. | |
+| `nonce-mismatch` | The ID token's `nonce` differs from the one the login request sent (a missing nonce is not this pattern). | |
 | `short-lifetime` | The JWT expired in the last 15 minutes and was issued to live 120 s or less. Also shown when the expiry is only a WARN (inside the skew allowance); the verdict does not change. | 16 |
 | `clock-skew` | A time check missed by more than the skew allowance but less than 15 minutes. | 02 |
 | `old-response`, `old-token` | Expired by more than 15 minutes: an old capture or a replay. | 16 (`old-token` only) |

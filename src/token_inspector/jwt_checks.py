@@ -315,6 +315,7 @@ def nonce_finding(token, opts):
         "login attempt.",
         "Usually the user started two logins (two tabs, the back button) or the relying party lost the session "
         "where it stored the nonce: a blocked or SameSite cookie, or a load balancer without sticky sessions.",
+        details={"actual": nonce, "expected": opts.nonce},
     )
 
 

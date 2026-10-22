@@ -163,6 +163,22 @@ def _saml_audience(fails, report):
     )
 
 
+def _nonce_mismatch(fails, report):
+    nonce = fails.get("oidc.nonce")
+    if not nonce or nonce.details.get("actual") is None:
+        return None
+    return Cause(
+        "nonce-mismatch",
+        "token from another login attempt",
+        "The ID token's nonce does not match the one this login sent, so the token belongs to a different login "
+        "attempt: the user started two logins, or the relying party lost the nonce it stored.",
+        "Ask whether the user had two tabs open or used the back button, then check the relying party keeps its "
+        "session between the login request and the callback: a blocked or SameSite cookie, or a load balancer "
+        "without sticky sessions, loses it.",
+        explains=["oidc.nonce"],
+    )
+
+
 def _gap(finding):
     """Seconds by which a time check missed (positive), or None."""
     d = finding.details
@@ -234,5 +250,5 @@ def _simply_old(fails, report):
 # Most specific first: a security problem outranks everything, and a cert or
 # key problem outranks the age of the capture it was found in.
 PATTERNS = [_xsw, _tampered, _key_rotation, _signing_cert_expired, _kid_not_in_jwks, _other_client, _saml_audience,
-            _short_lifetime, _clock_skew, _simply_old]
+            _nonce_mismatch, _short_lifetime, _clock_skew, _simply_old]
 TIMING_PATTERNS = (_short_lifetime, _clock_skew, _simply_old)
