@@ -116,6 +116,31 @@ Exit status is 0 when no check failed, 1 when at least one did, and 2 when the
 input or a key file could not be read. Every flag, including `--json` and the
 full list of expected values, is in [`docs/usage.md`](docs/usage.md).
 
+## Likely causes
+
+When several checks fail for one reason, a **Likely cause** section just above
+the verdict names that reason, says what to do first and, where identity-lab
+has one, links the runbook. It recognises:
+
+- **Signature wrapping (XSW):** a forged SAML response.
+- **Changed after signing:** the content no longer matches its signature.
+- **Key rotation:** the certificate the SP trusts has expired and the IdP signs
+  with a new one (runbook 01).
+- **Expired signing certificate:** the IdP still signs with it (runbook 01).
+- **Signing key not in the JWKS:** a stale JWKS after the IdP rotated its keys.
+- **Issued to another client:** the JWT's `aud` or `azp` names a different
+  client or API (runbook 16).
+- **SAML audience mismatch:** the assertion was issued for a different SP.
+- **Nonce mismatch:** the ID token belongs to another login attempt.
+- **Short token lifetime:** a JWT issued to live 120 s or less that has just
+  expired, shown even when the expiry is only a warning (runbook 16).
+- **Clock skew:** a time check missed by less than 15 minutes (runbook 02).
+- **An old capture:** expired long ago, so a replay or an old file (runbook 16
+  for a JWT).
+
+When nothing fits, the section is left out. Each pattern is described in
+[`docs/checks.md`](docs/checks.md#likely-cause).
+
 ## Lab samples
 
 The captures under [`samples/lab/`](samples/lab) are real SAML responses and
