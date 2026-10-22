@@ -69,5 +69,5 @@ def test_usage_lists_every_demo_sample():
 
 
 def test_no_em_dashes_in_docs():
-    for path in [ROOT / "README.md", *(ROOT / "docs").glob("*.md")]:
+    for path in [ROOT / "README.md", ROOT / "CHANGELOG.md", *(ROOT / "docs").glob("*.md")]:
         assert "\u2014" not in path.read_text(), path.name
