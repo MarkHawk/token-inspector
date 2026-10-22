@@ -118,7 +118,8 @@ def _other_client(fails, report):
         "name this relying party.",
         "Check that the client ID the application logs in with is the one it validates tokens against, and that "
         "the token was not taken from another application.",
-        explains=explains,
+        runbooks.API_BEARER_401,
+        explains,
     )
 
 
@@ -167,7 +168,8 @@ def _simply_old(fails, report):
             f"The {noun} expired {duration(late)} ago, far longer than clock skew could explain, so this is an "
             "old capture or a replay rather than a live failure.",
             first,
-            explains=[check_id],
+            runbooks.API_BEARER_401 if noun == "token" else None,
+            [check_id],
         )
     return None
 

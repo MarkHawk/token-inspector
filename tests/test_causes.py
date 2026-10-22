@@ -49,6 +49,10 @@ def test_known_patterns(samples, name, pattern, explains):
 @pytest.mark.parametrize("name,runbook", [
     ("saml-expired-cert.xml", "01-expired-signing-cert"),
     ("saml-skew-future.xml", "02-clock-skew"),
+    ("jwt-wrong-audience.txt", "16-api-bearer-401"),
+    ("oidc-azp-mismatch.txt", "16-api-bearer-401"),
+    ("jwt-expired.txt", "16-api-bearer-401"),
+    ("saml-expired-assertion.xml", None),
     ("saml-xsw.xml", None),
 ])
 def test_runbook_link_where_one_exists(samples, name, runbook):

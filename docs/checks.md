@@ -164,15 +164,15 @@ unchanged. With `--json` the same thing is in `likely_cause` (or `null`).
 
 The known patterns, most specific first (the first that fits wins):
 
-| Pattern | When it applies |
-|---|---|
-| `signature-wrapping` | A valid signature covers a different element from the assertion an SP would read, or IDs are duplicated: an XSW attack. |
-| `idp-key-rotation` | The certificate the SP trusts has expired and the IdP signs with a different, still valid one. |
-| `signing-cert-expired` | The IdP is signing with an expired certificate. |
-| `kid-not-in-jwks` | The JWT's `kid` is not in the JWKS: a stale JWKS after key rotation. |
-| `issued-to-another-client` | The JWT's `aud` or `azp` names a different client or API. |
-| `clock-skew` | A time check missed by more than the skew allowance but less than 15 minutes. |
-| `old-response`, `old-token` | Expired by more than 15 minutes: an old capture or a replay. |
+| Pattern | When it applies | Runbook |
+|---|---|---|
+| `signature-wrapping` | A valid signature covers a different element from the assertion an SP would read, or IDs are duplicated: an XSW attack. | |
+| `idp-key-rotation` | The certificate the SP trusts has expired and the IdP signs with a different, still valid one. | 01 |
+| `signing-cert-expired` | The IdP is signing with an expired certificate. | 01 |
+| `kid-not-in-jwks` | The JWT's `kid` is not in the JWKS: a stale JWKS after key rotation. | |
+| `issued-to-another-client` | The JWT's `aud` or `azp` names a different client or API. | 16 |
+| `clock-skew` | A time check missed by more than the skew allowance but less than 15 minutes. | 02 |
+| `old-response`, `old-token` | Expired by more than 15 minutes: an old capture or a replay. | 16 (`old-token` only) |
 
 The two timing patterns only apply when they account for every FAIL, because
 an expired timestamp says nothing about, say, a broken signature found in the
