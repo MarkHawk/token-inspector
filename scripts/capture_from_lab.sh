@@ -7,7 +7,7 @@
 #
 # Environment:
 #   LAB_HOST            the lab's LAB_HOST (required)
-#   LAB_DIR             the lab checkout, for its CA certificate (default ~/identity-lab)
+#   LAB_DIR             the lab checkout, for its CA certificate (default ../identity-lab, beside this repo)
 #   LAB_PASSWORD        the lab user's password (prompted for if unset)
 #   OIDC_CLIENT_SECRET  the oidc-rp client secret, only with --oidc (prompted for if unset)
 #
@@ -15,8 +15,9 @@
 # scripts/break.sh <scenario>), then run this with --label <scenario>.
 set -euo pipefail
 
-cd "$(dirname "$0")/.."
-LAB_DIR="${LAB_DIR:-$HOME/identity-lab}"
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$REPO_ROOT"
+LAB_DIR="${LAB_DIR:-$(dirname "$REPO_ROOT")/identity-lab}"
 CA="$LAB_DIR/certs/ca.crt"
 PY="venv/bin/python"
 
