@@ -1,0 +1,8 @@
+# Sample lab JWTs (access and ID token), expired, kept as samples
+061c1511b0a77edfed6b1324cf1d2270f64c845d:samples/lab/baseline/jwt-access-token.txt:jwt:1
+061c1511b0a77edfed6b1324cf1d2270f64c845d:samples/lab/baseline/jwt-id-token.txt:jwt:1
+# Sample lab JWTs for the expired-signing-cert scenario, expired, kept as samples
+d6f8b453e98cdcb85c77daa86157cd213f69c334:samples/lab/expired-signing-cert/jwt-access-token.txt:jwt:1
+d6f8b453e98cdcb85c77daa86157cd213f69c334:samples/lab/expired-signing-cert/jwt-id-token.txt:jwt:1
+# Expired demo JWT with example.com issuer, bundled demo sample
+93f5c424392717a7cd8a26f2d21706a6d453ee61:src/token_inspector/demo_samples/expired/jwt-expired.txt:jwt:1
